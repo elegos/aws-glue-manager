@@ -2,7 +2,7 @@ import logging
 from os import path
 from typing import Optional
 
-from PyQt5.QtCore import QSettings, QSize, Qt
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QLabel,
                              QMainWindow, QPushButton, QWidget)
