@@ -1,11 +1,14 @@
+import logging
 from os import path
+from typing import Optional
 
-from lib.config import ConfigManager
-from ui.settings import QSettingsDialog
 from PyQt5.QtCore import QSettings, QSize, Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
-                             QPushButton, QWidget)
+from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QLabel,
+                             QMainWindow, QPushButton, QWidget)
+
+from lib.config import AWSProfile, ConfigManager
+from ui.settings import QSettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -13,12 +16,17 @@ class MainWindow(QMainWindow):
     profilePicklist: QComboBox
     settingsButton: QPushButton
 
+    profile: Optional[AWSProfile] = None
+
+    _logger: logging.Logger
+
     def __init__(self, configManager: ConfigManager, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle('Glue Manager')
-
+        self._logger = logging.getLogger()
         self.config = configManager
+
+        self.setWindowTitle('Glue Manager')
 
         layout = QGridLayout()
         centralWidget = QWidget()
@@ -26,7 +34,10 @@ class MainWindow(QMainWindow):
 
         self.profilePicklist = QComboBox()
         self.profilePicklist.setMinimumWidth(220)
+        self.profilePicklist.currentIndexChanged.connect(
+            self.onProfileSelected)
         self.populateProfilePicklist()
+        self.onProfileSelected()
 
         self.settingsButton = QPushButton()
         self.settingsButton.setIcon(
@@ -66,4 +77,14 @@ class MainWindow(QMainWindow):
         dialog.exec_()
 
     def onProfilesChanged(self) -> None:
+        self._logger.info('Profiles updated')
         self.populateProfilePicklist()
+
+    def onProfileSelected(self, *args) -> None:
+        self.profile = next(
+            (profile for profile in self.config.profiles if profile.label == self.profilePicklist.currentText()), None)
+
+        if self.profile is None:
+            self._logger.info(f'Profile selected: <none>')
+        else:
+            self._logger.info(f'Profile selected: {self.profile.label}')
