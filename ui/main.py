@@ -4,7 +4,7 @@ from lib.config import ConfigManager
 from ui.settings import QSettingsDialog
 from PyQt5.QtCore import QSettings, QSize, Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QMainWindow,
+from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
                              QPushButton, QWidget)
 
 
@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
         centralWidget.setLayout(layout)
 
         self.profilePicklist = QComboBox()
-        self.profilePicklist.setPlaceholderText('Profile')
+        self.profilePicklist.setMinimumWidth(220)
         self.profilePicklist.addItems(
             [profile.label for profile in self.config.profiles])
 
@@ -36,6 +36,7 @@ class MainWindow(QMainWindow):
         self.settingsButton.clicked.connect(self.onSettingsButtonClick)
 
         topRightLayout = QHBoxLayout()
+        topRightLayout.addWidget(QLabel('Profile: '))
         topRightLayout.addWidget(self.profilePicklist)
         topRightLayout.addWidget(self.settingsButton)
         topRightWidget = QWidget()
