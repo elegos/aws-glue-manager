@@ -26,8 +26,7 @@ class MainWindow(QMainWindow):
 
         self.profilePicklist = QComboBox()
         self.profilePicklist.setMinimumWidth(220)
-        self.profilePicklist.addItems(
-            [profile.label for profile in self.config.profiles])
+        self.populateProfilePicklist()
 
         self.settingsButton = QPushButton()
         self.settingsButton.setIcon(
@@ -48,12 +47,23 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(centralWidget)
         self.setMinimumSize(640, 0)
 
-    def onSettingsButtonClick(self, *args):
+    def populateProfilePicklist(self) -> None:
+        self.profilePicklist.clear()
+        self.profilePicklist.addItems(
+            [profile.label for profile in self.config.profiles])
+
+    def onSettingsButtonClick(self, *args) -> None:
         dialog = QSettingsDialog(configManager=self.config)
 
         def onClose(*args):
             self.config.save()
             dialog.close()
+        dialog.signals.profilesModified.connect(self.onProfilesChanged)
+
         dialog.accepted.connect(onClose)
         dialog.rejected.connect(onClose)
+
         dialog.exec_()
+
+    def onProfilesChanged(self) -> None:
+        self.populateProfilePicklist()
