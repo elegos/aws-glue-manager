@@ -10,6 +10,7 @@ pytest = "*"
 [packages]
 pyqt5 = "*"
 pycryptodome = "*"
+boto3 = "*"
 
 [requires]
 python_version = "3.9"
