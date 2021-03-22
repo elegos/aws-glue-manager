@@ -1,4 +1,5 @@
 from os import access
+import logging
 from ui.alertDialog import QAlertDialog
 from PyQt5.QtCore import QObject, pyqtSignal
 from lib.config import AWSProfile, ConfigManager
@@ -12,6 +13,8 @@ class SettingsSignals(QObject):
 class QProfileEditDialog(QDialog):
     originalLabel: str
 
+    _logger: logging.Logger
+
     buttonBox: QDialogButtonBox
     label: QLineEdit
     region: QLineEdit
@@ -23,6 +26,7 @@ class QProfileEditDialog(QDialog):
 
         self.setWindowTitle(title)
         self.setMinimumWidth(420)
+        self._logger = logging.getLogger()
 
         self.originalLabel = label
 
@@ -58,8 +62,12 @@ class QSettingsDialog(QDialog):
 
     signals: SettingsSignals
 
+    _logger: logging.Logger
+
     def __init__(self, configManager: ConfigManager, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+        self._logger = logging.getLogger()
 
         self.setWindowTitle('Settings')
         self.signals = SettingsSignals()
@@ -151,6 +159,9 @@ class QSettingsDialog(QDialog):
         # otherwise the object will keep the changes
         if not found:
             self.config.profiles.append(profile)
+            self._logger.info(f'Created profile "{profile.label}"')
+        else:
+            self._logger.info(f'Edited profile "{profile.label}"')
 
         self.populateProfilesPicklist()
         self.manageProfileButtonStates()
@@ -170,6 +181,7 @@ class QSettingsDialog(QDialog):
 
     def onProfileDeleted(self, profile: AWSProfile) -> None:
         self.config.profiles.pop(self.config.profiles.index(profile))
+        self._logger.info(f'Deleted profile "{profile.label}"')
 
         self.populateProfilesPicklist()
         self.manageProfileButtonStates()

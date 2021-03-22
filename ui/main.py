@@ -77,14 +77,11 @@ class MainWindow(QMainWindow):
         dialog.exec_()
 
     def onProfilesChanged(self) -> None:
-        self._logger.info('Profiles updated')
         self.populateProfilePicklist()
 
     def onProfileSelected(self, *args) -> None:
         self.profile = next(
             (profile for profile in self.config.profiles if profile.label == self.profilePicklist.currentText()), None)
 
-        if self.profile is None:
-            self._logger.info(f'Profile selected: <none>')
-        else:
+        if self.profile is not None:
             self._logger.info(f'Profile selected: {self.profile.label}')
