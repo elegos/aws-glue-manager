@@ -1,11 +1,12 @@
 import logging
 from os import path
 from typing import Optional
+from ui.tabs import JobsTab, WorkflowsTab
 
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QLabel,
-                             QMainWindow, QPushButton, QWidget)
+                             QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget)
 
 from lib.config import AWSProfile, ConfigManager
 from ui.settings import QSettingsDialog
@@ -15,6 +16,9 @@ class MainWindow(QMainWindow):
     config: ConfigManager
     profilePicklist: QComboBox
     settingsButton: QPushButton
+
+    jobsTab: JobsTab
+    workflowsTab: WorkflowsTab
 
     profile: Optional[AWSProfile] = None
 
@@ -28,7 +32,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle('Glue Manager')
 
-        layout = QGridLayout()
+        layout = QVBoxLayout()
         centralWidget = QWidget()
         centralWidget.setLayout(layout)
 
@@ -52,11 +56,19 @@ class MainWindow(QMainWindow):
         topRightWidget = QWidget()
         topRightWidget.setLayout(topRightLayout)
 
-        layout.addWidget(topRightWidget, 0, 1, 0, -1,
-                         Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(topRightWidget, alignment=Qt.AlignmentFlag.AlignRight)
+
+        self.jobsTab = JobsTab()
+        self.workflowsTab = WorkflowsTab()
+
+        tabs = QTabWidget()
+        tabs.addTab(self.jobsTab, 'Jobs')
+        tabs.addTab(self.workflowsTab, 'Workflows')
+
+        layout.addWidget(tabs)
 
         self.setCentralWidget(centralWidget)
-        self.setMinimumSize(640, 0)
+        self.setMinimumSize(940, 0)
 
     def populateProfilePicklist(self) -> None:
         self.profilePicklist.clear()

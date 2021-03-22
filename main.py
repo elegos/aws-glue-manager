@@ -13,7 +13,6 @@ app = QApplication(sys.argv)
 
 configManager = config.ConfigManager()
 window = MainWindow(configManager=configManager)
-window.show()
 
 if debugMode:
     logDialog = QDebugWindow()
@@ -22,4 +21,5 @@ if debugMode:
     logDialog.show()
     logDialog.raise_()
 
+window.show()
 app.exec_()
