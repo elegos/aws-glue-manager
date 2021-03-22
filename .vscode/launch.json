@@ -20,6 +20,17 @@
             "program": "${workspaceFolder}/main.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Application (debug console)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--debug"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }
