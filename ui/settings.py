@@ -1,5 +1,5 @@
 from os import access
-from ui.QAlertDialog import QAlertDialog
+from ui.alertDialog import QAlertDialog
 from PyQt5.QtCore import QObject, pyqtSignal
 from lib.config import AWSProfile, ConfigManager
 from PyQt5.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
