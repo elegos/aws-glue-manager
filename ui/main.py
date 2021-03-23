@@ -1,6 +1,6 @@
 import logging
 from os import path
-from typing import Optional
+from typing import List, Optional
 
 from PyQt5.QtCore import QRunnable, QSize, QThreadPool, Qt
 from PyQt5.QtGui import QIcon
@@ -120,19 +120,34 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Downloading data...')
         self.statusProgressBar.setRange(0, 0)
         self.statusProgressBar.setValue(0)
+        self.statusProgressBar.setVisible(True)
 
         self.tabsView.setEnabled(False)
 
+        # jobs
         if index == 0:
-            # jobs
+            self.jobsTab.signals.enable.emit(False)
             runnable = aws.getRunnable(aws.getJobs, self.profile)
-            runnable.signals.success.connect(
-                lambda jobs: self._logger.debug(jobs))
+            runnable.signals.success.connect(self.onJobsDownloaded)
             runnable.signals.raised.connect(lambda ex: self._logger.error(ex))
 
             self.threadPool.start(runnable)
         elif index == 1:
-            pass  # workflows
+            # workflows
+            pass
         else:
             self.statusBar().showMessage('Ready')
             self.statusProgressBar.reset()
+
+    def onJobsDownloaded(self, jobs: List[aws.Job]):
+        self._logger.info('Jobs downloaded')
+        names = [job.Name for job in jobs]
+        names.sort()
+        self._logger.info('\n'.join(names))
+
+        # TODO get last execution status for each job
+
+        self.statusProgressBar.setVisible(False)
+        self.statusBar().showMessage('Ready')
+        self.tabsView.setEnabled(True)
+        self.jobsTab.signals.enable.emit(True)
