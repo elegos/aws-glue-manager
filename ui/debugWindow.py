@@ -15,17 +15,17 @@ class QTextEditLogger(logging.Handler):
 
 
 class QDebugWindow(QDialog, QPlainTextEdit):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, loggingLevel: int = logging.DEBUG):
         super().__init__(parent)
 
         self.setWindowTitle('Debug log')
         self.setMinimumSize(800, 400)
-        logTextBox = QTextEditLogger(level=logging.DEBUG)
+        logTextBox = QTextEditLogger(level=loggingLevel)
         logTextBox.setFormatter(logging.Formatter(
             '%(asctime)s - %(levelname)s - %(message)s'))
         logging.getLogger().addHandler(logTextBox)
         # You can control the logging level
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(loggingLevel)
 
         layout = QVBoxLayout()
         # Add the new logging box widget to the layout
