@@ -70,6 +70,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(topRightWidget, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.jobsTab = JobsTab()
+        self.jobsTab.refreshButton.clicked.connect(
+            lambda _: self.onTabSelected(0))
         self.workflowsTab = WorkflowsTab()
 
         self.tabsView = QTabWidget()
