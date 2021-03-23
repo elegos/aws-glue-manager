@@ -1,15 +1,16 @@
 import logging
 from os import path
 from typing import Optional
-from ui.tabs import JobsTab, WorkflowsTab
 
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QComboBox, QGridLayout, QHBoxLayout, QLabel,
-                             QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QMainWindow,
+                             QProgressBar, QPushButton, QTabWidget,
+                             QVBoxLayout, QWidget)
 
 from lib.config import AWSProfile, ConfigManager
 from ui.settings import QSettingsDialog
+from ui.tabs import JobsTab, WorkflowsTab
 
 
 class MainWindow(QMainWindow):
@@ -17,6 +18,9 @@ class MainWindow(QMainWindow):
     profilePicklist: QComboBox
     settingsButton: QPushButton
 
+    statusProgressBar: QProgressBar
+
+    tabsView: QTabWidget
     jobsTab: JobsTab
     workflowsTab: WorkflowsTab
 
@@ -61,14 +65,20 @@ class MainWindow(QMainWindow):
         self.jobsTab = JobsTab()
         self.workflowsTab = WorkflowsTab()
 
-        tabs = QTabWidget()
-        tabs.addTab(self.jobsTab, 'Jobs')
-        tabs.addTab(self.workflowsTab, 'Workflows')
+        self.tabsView = QTabWidget()
+        self.tabsView.addTab(self.jobsTab, 'Jobs')
+        self.tabsView.addTab(self.workflowsTab, 'Workflows')
 
-        layout.addWidget(tabs)
+        layout.addWidget(self.tabsView)
 
         self.setCentralWidget(centralWidget)
         self.setMinimumSize(940, 0)
+
+        self.statusProgressBar = QProgressBar()
+        self.statusBar().addPermanentWidget(self.statusProgressBar)
+        self.statusBar().showMessage('Ready')
+
+        self.onTabSelected()
 
     def populateProfilePicklist(self) -> None:
         self.profilePicklist.clear()
@@ -97,3 +107,21 @@ class MainWindow(QMainWindow):
 
         if self.profile is not None:
             self._logger.info(f'Profile selected: {self.profile.label}')
+
+    def onTabSelected(self, *args) -> None:
+        if self.profile is None:
+            self.statusProgressBar.reset()
+            return
+
+        self.statusBar().showMessage('Downloading data...')
+        self.statusProgressBar.setRange(0, 0)
+        self.statusProgressBar.setValue(0)
+
+        index = self.tabsView.currentIndex()
+        if index == 0:
+            pass  # jobs
+        elif index == 1:
+            pass  # workflows
+        else:
+            self.statusBar().showMessage('Ready')
+            self.statusProgressBar.reset()
