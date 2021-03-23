@@ -3,7 +3,7 @@ import pathlib
 import platform
 import shutil
 from dataclasses import dataclass, field
-from os import path
+from os import path, getenv
 from os.path import expanduser
 from typing import Any, List, Optional
 
@@ -82,7 +82,7 @@ class ConfigManager:
             self.configRoot = expanduser(
                 f'~/Library/Application Support/{appId}')
         elif sysName == 'windows':
-            self.configRoot = expanduser(f'%APPDATA%\{appId}')
+            self.configRoot = path.sep.join([getenv('APPDATA'), appId])
         else:
             raise UnsupportedPlatformException()
 

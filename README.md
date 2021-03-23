@@ -25,7 +25,6 @@
 
 - pipenv
 - python 3.9
-- Qt5 libraries
 
 ### Generic method
 
@@ -53,8 +52,14 @@ Make targets:
 - `all` (default): execute `clean`, `test`, `dist`
 
 ### Windows
+ Work in progress. For now, execute the following commands:
 
-To be defined. Please follow the generic instructions
+```
+pipenv run pip install pywin32-ctypes
+pipenv run pip install pefile
+pipenv run pyinstaller --name "AWSGlueManager" --windowed --onefile main.py
+xcopy /i ui\icons dist\ui\icons
+```
 
 ## Executing
 
@@ -63,7 +68,7 @@ You can add the following flags to the application's call:
 - `-d`, `--debug`: enable the debug logger with debug level
 - `-i`, `--info`: enable the debug logger with info level
 
-### From sources (requires the Qt5 libs installed)
+### From sources
 ```
 pipenv run python main.py [flags]
 ```

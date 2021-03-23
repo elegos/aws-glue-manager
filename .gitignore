@@ -3,3 +3,4 @@ __pycache__
 /.vscode/settings.json
 /build
 /dist
+/*.spec
