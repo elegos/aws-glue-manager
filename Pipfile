@@ -7,6 +7,7 @@ verify_ssl = true
 autopep8 = "*"
 pytest = "*"
 boto3-type-annotations = "*"
+pyinstaller = "*"
 
 [packages]
 pyqt5 = "*"
