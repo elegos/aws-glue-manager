@@ -79,7 +79,6 @@ class JobsTab(QWidget):
         self.refreshButton = QPushButton()
         self.refreshButton.setIcon(
             QIcon(path.sep.join(['ui', 'icons', 'refresh-cw.svg'])))
-
         self.refreshButton.setIconSize(QSize(18, 18))
 
         filterLayout.addWidget(self.filter)
@@ -180,7 +179,10 @@ class JobsTab(QWidget):
             model.setItem(row, 3, QStandardItem(
                 f'{hours:02d}:{minutes:02d}:{seconds:02d}'))
             model.setItem(row, 4, QStandardItem(jobRuns[0].JobRunState))
-            model.setItem(row, 5, QStandardItem(jobRuns[0].ErrorMessage))
+
+            errorItem = QStandardItem(jobRuns[0].ErrorMessage)
+            errorItem.setToolTip(jobRuns[0].ErrorMessage)
+            model.setItem(row, 5, errorItem)
 
 
 class WorkflowsTab(QWidget):
