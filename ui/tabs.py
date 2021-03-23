@@ -1,9 +1,7 @@
-import dataclasses
 from lib import aws
-import logging
 from os import path
-from typing import Dict, List, Optional, Tuple
-from PyQt5.QtCore import QModelIndex, QObject, QSize, QTimer, pyqtSignal
+from typing import Dict, List, Tuple
+from PyQt5.QtCore import QObject, QSize, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QTableView, QTextEdit, QVBoxLayout, QWidget
 
@@ -25,6 +23,13 @@ def getTableModel(columnNames: List[str]) -> QStandardItemModel:
     return model
 
 
+class QReadOnlyItem(QStandardItem):
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+
+        self.setEditable(False)
+
+
 class TabViewSignals(QObject):
     enable = pyqtSignal(bool)
 
@@ -36,7 +41,7 @@ class JobsSignals(TabViewSignals):
 
 jobColumns = [
     ('', 16), ('Name', 330),
-    ('Last exec date', 146), ('Duration', 80),
+    ('Last execution', 146), ('Duration', 80),
     ('Result', 140), ('Error message', 244)
 ]
 
@@ -114,12 +119,11 @@ class JobsTab(QWidget):
         if tableModel.rowCount() > 0:
             tableModel.removeRows(0, tableModel.rowCount())
 
-        fields = [field.name for field in dataclasses.fields(aws.Job)]
         for row in range(len(self.jobs)):
             job = self.jobs[row]
 
             text = job.Name
-            item = QStandardItem(text)
+            item = QReadOnlyItem(text)
             tableModel.setItem(row, 1, item)
 
     def appendJobRuns(self, jobRuns: List[aws.JobRun]):
@@ -144,6 +148,9 @@ class JobsTab(QWidget):
             if jobRuns == None:
                 continue
 
+            jobRuns.sort(key=lambda run: run.StartedOn, reverse=True)
+            jobRuns = jobRuns[0:5]
+
             totalRuns = len(jobRuns)
             succeededRuns = len(
                 [run for run in jobRuns if run.JobRunState == 'SUCCEEDED'])
@@ -163,9 +170,8 @@ class JobsTab(QWidget):
                 iconSvg = 'cloud-lightning.svg'
 
             icon = QIcon(path.sep.join([*iconsBasePath, iconSvg]))
-            model.setItem(row, 0, QStandardItem(icon, ''))
+            model.setItem(row, 0, QReadOnlyItem(icon, ''))
 
-            jobRuns.sort(key=lambda run: run.StartedOn)
             lastExecDate = jobRuns[0].StartedOn
             lastDuration = jobRuns[0].ExecutionTime
 
@@ -174,13 +180,13 @@ class JobsTab(QWidget):
             minutes = int(remainingSeconds / 60)
             seconds = remainingSeconds - minutes * 60
 
-            model.setItem(row, 2, QStandardItem(
+            model.setItem(row, 2, QReadOnlyItem(
                 lastExecDate.strftime('%Y-%m-%d %H:%M:%S')))
-            model.setItem(row, 3, QStandardItem(
+            model.setItem(row, 3, QReadOnlyItem(
                 f'{hours:02d}:{minutes:02d}:{seconds:02d}'))
-            model.setItem(row, 4, QStandardItem(jobRuns[0].JobRunState))
+            model.setItem(row, 4, QReadOnlyItem(jobRuns[0].JobRunState))
 
-            errorItem = QStandardItem(jobRuns[0].ErrorMessage)
+            errorItem = QReadOnlyItem(jobRuns[0].ErrorMessage)
             errorItem.setToolTip(jobRuns[0].ErrorMessage)
             model.setItem(row, 5, errorItem)
 

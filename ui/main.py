@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
                            max=len(jobs), stackCount=len(jobs))
         for job in jobs:
             runnable = aws.getRunnable(
-                aws.getJobRuns, profile=self.profile, jobName=job.Name, maxResults=5)
+                aws.getJobRuns, profile=self.profile, jobName=job.Name)
             runnable.signals.success.connect(self.onJobRunsDownloaded)
             runnable.signals.raised.connect(
                 lambda ex: self.onAWSException(ex, True))
