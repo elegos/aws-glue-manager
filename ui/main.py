@@ -29,12 +29,18 @@ class MainWindow(QMainWindow):
     jobsTab: JobsTab
     workflowsTab: WorkflowsTab
 
+    apiStack: int
+
+    jobs: List[aws.Job]
+    jobRuns: List[aws.JobRun]
+
     def __init__(self, threadPool: QThreadPool, configManager: ConfigManager, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self._logger = logging.getLogger()
         self.config = configManager
         self.threadPool = threadPool
+        self.apiStack = 0
 
         self.setWindowTitle('Glue Manager')
 
@@ -44,10 +50,9 @@ class MainWindow(QMainWindow):
 
         self.profilePicklist = QComboBox()
         self.profilePicklist.setMinimumWidth(220)
+        self.populateProfilePicklist()
         self.profilePicklist.currentIndexChanged.connect(
             self.onProfileSelected)
-        self.populateProfilePicklist()
-        self.onProfileSelected()
 
         self.settingsButton = QPushButton()
         self.settingsButton.setIcon(
@@ -76,13 +81,13 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.tabsView)
 
         self.setCentralWidget(centralWidget)
-        self.setMinimumSize(940, 0)
+        self.setMinimumSize(1024, 900)
 
         self.statusProgressBar = QProgressBar()
         self.statusBar().addPermanentWidget(self.statusProgressBar)
         self.statusBar().showMessage('Ready')
 
-        self.onTabSelected(0)
+        self.onProfileSelected()
 
     def populateProfilePicklist(self) -> None:
         self.profilePicklist.clear()
@@ -111,33 +116,35 @@ class MainWindow(QMainWindow):
 
         if self.profile is not None:
             self._logger.info(f'Profile selected: {self.profile.label}')
+            self.onTabSelected(self.tabsView.currentIndex())
 
     def onTabSelected(self, index) -> None:
         if self.profile is None:
-            self.statusProgressBar.reset()
+            self.statusProgressBar.setVisible(False)
             return
-
-        self.statusBar().showMessage('Downloading data...')
-        self.statusProgressBar.setRange(0, 0)
-        self.statusProgressBar.setValue(0)
-        self.statusProgressBar.setVisible(True)
-
-        self.tabsView.setEnabled(False)
 
         # jobs
         if index == 0:
-            self.jobsTab.signals.enable.emit(False)
+            self.jobsTab.signals.jobsUpdated.emit([])
+            self.jobsTab.signals.jobRunsUpdated.emit([])
+
+            self.beforeAWSCall('Downloading jobs data...')
             runnable = aws.getRunnable(aws.getJobs, self.profile)
+
             runnable.signals.success.connect(self.onJobsDownloaded)
-            runnable.signals.raised.connect(lambda ex: self._logger.error(ex))
+            runnable.signals.success.connect(
+                lambda: self.afterAWSCall('Ready'))
+            runnable.signals.raised.connect(
+                lambda ex: self.onAWSException(ex, True))
 
             self.threadPool.start(runnable)
         elif index == 1:
             # workflows
+            # self.beforeAWSCall('Downloading workflows data...')
             pass
         else:
             self.statusBar().showMessage('Ready')
-            self.statusProgressBar.reset()
+            self.statusProgressBar.setVisible(False)
 
     def onJobsDownloaded(self, jobs: List[aws.Job]):
         self._logger.info('Jobs downloaded')
@@ -145,9 +152,53 @@ class MainWindow(QMainWindow):
         names.sort()
         self._logger.info('\n'.join(names))
 
-        # TODO get last execution status for each job
+        self.jobsTab.signals.jobsUpdated.emit(jobs)
 
-        self.statusProgressBar.setVisible(False)
-        self.statusBar().showMessage('Ready')
-        self.tabsView.setEnabled(True)
-        self.jobsTab.signals.enable.emit(True)
+        self.beforeAWSCall('Downloading jobs run details...',
+                           max=len(jobs), stackCount=len(jobs))
+        for job in jobs:
+            runnable = aws.getRunnable(
+                aws.getJobRuns, profile=self.profile, jobName=job.Name, maxResults=5)
+            runnable.signals.success.connect(self.onJobRunsDownloaded)
+            runnable.signals.raised.connect(
+                lambda ex: self.onAWSException(ex, True))
+
+            self.threadPool.start(runnable)
+
+    def onJobRunsDownloaded(self, jobRuns: List[aws.JobRun]):
+        self.afterAWSCall(incrementProgress=True)
+        self.jobsTab.signals.jobRunsUpdated.emit(jobRuns)
+
+    def onAWSException(self, exception: Exception, withAfterAWSCall: bool):
+        self._logger.error(exception)
+        if withAfterAWSCall:
+            self.afterAWSCall(str(exception))
+
+    def beforeAWSCall(self, status: str, max: int = 0, stackCount: int = 1):
+        self.apiStack += stackCount
+
+        self.statusBar().showMessage(status)
+        self.statusProgressBar.setRange(0, max)
+        self.statusProgressBar.setValue(0)
+        self.statusProgressBar.setVisible(True)
+
+        self.profilePicklist.setEnabled(False)
+        self.tabsView.setEnabled(False)
+        self.jobsTab.signals.enable.emit(False)
+
+    def afterAWSCall(self, status: str = 'Ready', incrementProgress: bool = False):
+        self.apiStack -= 1
+
+        if self.apiStack < 0:
+            self.apiStack = 0
+
+        if incrementProgress:
+            self.statusProgressBar.setValue(self.statusProgressBar.value() + 1)
+
+        if self.apiStack == 0:
+            self.statusProgressBar.setVisible(False)
+            self.statusBar().showMessage(status)
+
+            self.profilePicklist.setEnabled(True)
+            self.tabsView.setEnabled(True)
+            self.jobsTab.signals.enable.emit(True)
