@@ -125,7 +125,7 @@ def getJobRuns(profile: AWSProfile, jobName: str, maxResults: Optional[int] = No
         return getResponseItems(JobRun, 'JobRuns', response)
 
     paginator: GetJobRunsPaginator = client.get_paginator('get_job_runs')
-    responses = paginator.paginate()
+    responses = paginator.paginate(JobName=jobName)
     runs = []
     for response in responses:
         runs.extend(getResponseItems(JobRun, 'JobRuns', response))
