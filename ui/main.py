@@ -2,19 +2,24 @@ import logging
 from os import path
 from typing import Optional
 
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import QRunnable, QSize, QThreadPool, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QMainWindow,
                              QProgressBar, QPushButton, QTabWidget,
                              QVBoxLayout, QWidget)
 
 from lib.config import AWSProfile, ConfigManager
+from lib import aws
 from ui.settings import QSettingsDialog
 from ui.tabs import JobsTab, WorkflowsTab
 
 
 class MainWindow(QMainWindow):
     config: ConfigManager
+    threadPool: QThreadPool
+    profile: Optional[AWSProfile] = None
+    _logger: logging.Logger
+
     profilePicklist: QComboBox
     settingsButton: QPushButton
 
@@ -24,15 +29,12 @@ class MainWindow(QMainWindow):
     jobsTab: JobsTab
     workflowsTab: WorkflowsTab
 
-    profile: Optional[AWSProfile] = None
-
-    _logger: logging.Logger
-
-    def __init__(self, configManager: ConfigManager, *args, **kwargs) -> None:
+    def __init__(self, threadPool: QThreadPool, configManager: ConfigManager, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self._logger = logging.getLogger()
         self.config = configManager
+        self.threadPool = threadPool
 
         self.setWindowTitle('Glue Manager')
 
@@ -69,6 +71,8 @@ class MainWindow(QMainWindow):
         self.tabsView.addTab(self.jobsTab, 'Jobs')
         self.tabsView.addTab(self.workflowsTab, 'Workflows')
 
+        self.tabsView.currentChanged.connect(self.onTabSelected)
+
         layout.addWidget(self.tabsView)
 
         self.setCentralWidget(centralWidget)
@@ -78,7 +82,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.statusProgressBar)
         self.statusBar().showMessage('Ready')
 
-        self.onTabSelected()
+        self.onTabSelected(0)
 
     def populateProfilePicklist(self) -> None:
         self.profilePicklist.clear()
@@ -108,7 +112,7 @@ class MainWindow(QMainWindow):
         if self.profile is not None:
             self._logger.info(f'Profile selected: {self.profile.label}')
 
-    def onTabSelected(self, *args) -> None:
+    def onTabSelected(self, index) -> None:
         if self.profile is None:
             self.statusProgressBar.reset()
             return
@@ -117,9 +121,16 @@ class MainWindow(QMainWindow):
         self.statusProgressBar.setRange(0, 0)
         self.statusProgressBar.setValue(0)
 
-        index = self.tabsView.currentIndex()
+        self.tabsView.setEnabled(False)
+
         if index == 0:
-            pass  # jobs
+            # jobs
+            runnable = aws.getRunnable(aws.getJobs, self.profile)
+            runnable.signals.success.connect(
+                lambda jobs: self._logger.debug(jobs))
+            runnable.signals.raised.connect(lambda ex: self._logger.error(ex))
+
+            self.threadPool.start(runnable)
         elif index == 1:
             pass  # workflows
         else:
