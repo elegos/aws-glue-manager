@@ -57,4 +57,3 @@ iconsOutput = path.sep.join([distPath, appName, 'ui', 'icons'])
 
 shutil.rmtree(iconsOutput, True)
 shutil.copytree(iconsInput, iconsOutput)
-shutil.make_archive(path.sep.join([distPath, f'{appName}_{system}']), 'zip', path.sep.join([distPath, appName]))

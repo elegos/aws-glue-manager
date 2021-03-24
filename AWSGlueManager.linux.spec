@@ -6,7 +6,7 @@ import shutil
 
 import PyInstaller.config
 
-system = 'windows'
+system = 'linux'
 distPath = path.sep.join(['.', 'dist', system])
 appName = 'AWSGlueManager'
 

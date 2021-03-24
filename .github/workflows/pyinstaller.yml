@@ -1,0 +1,39 @@
+name: Package exe with PyInstaller - Windows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: PyInstaller (Linux)
+      uses: JackMcKew/pyinstaller-action-linux@main
+      with:
+        path: .
+        spec: AWSGlueManager.linux.spec
+
+    - name: PyInstaller (Windows)
+      uses: JackMcKew/pyinstaller-action-windows@main
+      with:
+        path: .
+        spec: AWSGlueManager.windows.spec
+
+    - name: Artifact upload (Linux)
+      uses: actions/upload-artifact@v2
+      with:
+        name: AWSGlueManager_linux
+        path: dist/linux/AWSGlueManager
+
+    - name: Artifact upload (Windows)
+      uses: actions/upload-artifact@v2
+      with:
+        name: AWSGlueManager_windows
+        path: dist/windows/AWSGlueManager
