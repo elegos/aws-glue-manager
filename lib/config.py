@@ -31,18 +31,20 @@ class AWSProfile:
     secretAccessKey: str = field(default='')
 
     def loadFromArgs(self, **kwargs) -> None:
+        encdec = encryption.EncDec()
         for key in self.__dict__.keys():
             if key in kwargs:
                 value = kwargs[key]
                 if key == 'secretAccessKey':
-                    value = encryption.decrypt(value)
+                    value = encdec.decrypt(value)
                 setattr(self, key, value)
 
     def asDict(self):
+        encdec = encryption.EncDec()
         result = {}
         for key, value in self.__dict__.items():
             if key == 'secretAccessKey':
-                value = encryption.encrypt(value)
+                value = encdec.encrypt(value)
             result[key] = value
 
         return result
@@ -67,13 +69,13 @@ class Settings:
 
 class ConfigManager:
     configRoot: str = ''
-    _settings: Optional[Settings] = {}
+    _settings: Settings
 
     def __init__(self, appId=const.appId):
         '''
         Raise config.UnsupportedPlatformException
         '''
-        super().__setattr__('_settings', None)
+        super().__setattr__('_settings', Settings())
 
         sysName = platform.system().lower()
         if sysName == 'linux':
