@@ -3,7 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['main.py'],
+a = Analysis(['mains.py'],
+             pathex=['/home/gfurlan/Development/qt-glue-manager'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -18,15 +19,19 @@ pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
-          a.binaries,
-          a.zipfiles,
-          a.datas,
           [],
-          name='AWSGlueManager',
+          exclude_binaries=True,
+          name='mains',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          upx_exclude=[],
-          runtime_tmpdir=None,
-          console=False )
+          console=True )
+coll = COLLECT(exe,
+               a.binaries,
+               a.zipfiles,
+               a.datas,
+               strip=False,
+               upx=True,
+               upx_exclude=[],
+               name='mains')
