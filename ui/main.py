@@ -1,9 +1,9 @@
 import logging
 from os import path
 from typing import List, Optional
+from ui.icon import QSVGIcon
 
-from PyQt5.QtCore import QRunnable, QSize, QThreadPool, Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QSize, QThreadPool, Qt
 from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QMainWindow,
                              QProgressBar, QPushButton, QTabWidget,
                              QVBoxLayout, QWidget)
@@ -55,8 +55,7 @@ class MainWindow(QMainWindow):
             self.onProfileSelected)
 
         self.settingsButton = QPushButton()
-        self.settingsButton.setIcon(
-            QIcon(path.sep.join(['ui', 'icons', 'settings.svg'])))
+        self.settingsButton.setIcon(QSVGIcon('settings.svg'))
         self.settingsButton.setIconSize(QSize(24, 24))
         self.settingsButton.clicked.connect(self.onSettingsButtonClick)
 

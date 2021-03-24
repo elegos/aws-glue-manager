@@ -1,5 +1,6 @@
 import logging
 import sys
+from ui.icon import QSVGIcon
 
 from PyQt5.QtCore import QThreadPool
 from PyQt5.QtWidgets import QApplication
@@ -12,6 +13,7 @@ infoMode = listUtils.popFlag(sys.argv, '-i', '--info')
 debugMode = listUtils.popFlag(sys.argv, '-d', '--debug')
 
 app = QApplication(sys.argv)
+app.setWindowIcon(QSVGIcon('Arch_AWS-Glue_64.svg'))
 
 configManager = config.ConfigManager()
 threadPool = QThreadPool()

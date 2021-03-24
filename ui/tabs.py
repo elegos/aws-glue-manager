@@ -1,8 +1,8 @@
+from ui.icon import QSVGIcon
 from lib import aws
-from os import path
 from typing import Dict, List, Tuple
 from PyQt5.QtCore import QObject, QSize, QTimer, pyqtSignal
-from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
+from PyQt5.QtGui import QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QTableView, QTextEdit, QVBoxLayout, QWidget
 
 
@@ -82,8 +82,7 @@ class JobsTab(QWidget):
             'free text | field : value | filter 1; filter 2; ...')
 
         self.refreshButton = QPushButton()
-        self.refreshButton.setIcon(
-            QIcon(path.sep.join(['ui', 'icons', 'refresh-cw.svg'])))
+        self.refreshButton.setIcon(QSVGIcon('refresh-cw.svg'))
         self.refreshButton.setIconSize(QSize(18, 18))
 
         filterLayout.addWidget(self.filter)
@@ -159,8 +158,6 @@ class JobsTab(QWidget):
             if totalRuns == 0:
                 continue
 
-            iconsBasePath = ['ui', 'icons']
-
             iconSvg = 'sun.svg'
             if failedRuns == 1:
                 iconSvg = 'cloud.svg'
@@ -169,7 +166,7 @@ class JobsTab(QWidget):
             elif failedRuns >= 3:
                 iconSvg = 'cloud-lightning.svg'
 
-            icon = QIcon(path.sep.join([*iconsBasePath, iconSvg]))
+            icon = QSVGIcon(iconSvg)
             model.setItem(row, 0, QReadOnlyItem(icon, ''))
 
             lastExecDate = jobRuns[0].StartedOn
