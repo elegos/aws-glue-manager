@@ -1,14 +1,14 @@
 from typing import Dict, List
 
+from PyQt5.QtCore import QModelIndex, QObject, QSize, QTimer, pyqtSignal
 from PyQt5.QtGui import QStandardItemModel
-
-from PyQt5.QtCore import QObject, QSize, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (QHBoxLayout, QLineEdit, QPushButton, QTableView,
                              QTextEdit, QVBoxLayout, QWidget)
 
 from lib import aws
 from ui.icon import QSVGIcon
-from ui.tabs.common import decorateTable, QReadOnlyItem
+from ui.jobDetails import QJobDetails
+from ui.tabs.common import QReadOnlyItem, decorateTable
 
 jobColumns = [
     ('', 16), ('Name', 330),
@@ -35,6 +35,7 @@ class JobsTab(QWidget):
 
     jobs: List[aws.Job]
     jobRuns: Dict[str, List[aws.JobRun]]
+    jobDialogs: Dict[str, QJobDetails]
 
     jobRunDetailsTimer: QTimer
 
@@ -48,6 +49,7 @@ class JobsTab(QWidget):
 
         self.jobs = []
         self.jobRuns = {}
+        self.jobDialogs = {}
 
         self.jobRunDetailsTimer = QTimer()
         self.jobRunDetailsTimer.timeout.connect(self.populateJobRunDetails)
@@ -72,6 +74,8 @@ class JobsTab(QWidget):
         self.table = QTableView()
         decorateTable(self.table, *jobColumns)
 
+        self.table.doubleClicked.connect(self.onTableDoubleClick)
+
         layout.addWidget(filterWidget)
         layout.addWidget(self.table, stretch=1)
 
@@ -86,6 +90,9 @@ class JobsTab(QWidget):
             self.refreshButton.setEnabled(False)
 
     def updateJobs(self, jobs: List[aws.Job]):
+        # Reset the opened dialogs
+        self.jobDialogs = {}
+
         self.jobs = jobs
         if len(jobs) == 0:
             self.jobRuns = {}
@@ -167,3 +174,14 @@ class JobsTab(QWidget):
             errorItem = QReadOnlyItem(jobRuns[0].ErrorMessage)
             errorItem.setToolTip(jobRuns[0].ErrorMessage)
             model.setItem(row, 5, errorItem)
+
+    def onTableDoubleClick(self, index: QModelIndex):
+        job = self.jobs[index.row()]
+        jobRuns = self.jobRuns[job.Name] if job.Name in self.jobRuns else []
+
+        if job.Name in self.jobDialogs:
+            del(self.jobDialogs[job.Name])
+
+        detailsWindow = QJobDetails(job, jobRuns)
+        detailsWindow.show()
+        self.jobDialogs[job.Name] = detailsWindow
