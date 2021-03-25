@@ -1,15 +1,14 @@
 import logging
-from os import path
 from typing import List, Optional
-from ui.icon import QSVGIcon
 
-from PyQt5.QtCore import QSize, QThreadPool, Qt
-from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QMainWindow,
-                             QProgressBar, QPushButton, QTabWidget,
-                             QVBoxLayout, QWidget)
+from PyQt5.QtCore import QSize, Qt, QThreadPool
+from PyQt5.QtWidgets import (QApplication, QComboBox, QHBoxLayout, QLabel,
+                             QMainWindow, QProgressBar, QPushButton,
+                             QTabWidget, QVBoxLayout, QWidget)
 
-from lib.config import AWSProfile, ConfigManager
 from lib import aws
+from lib.config import AWSProfile, ConfigManager
+from ui.icon import QSVGIcon
 from ui.settings import QSettingsDialog
 from ui.tabs import JobsTab, WorkflowsTab
 
@@ -205,3 +204,10 @@ class MainWindow(QMainWindow):
             self.profilePicklist.setEnabled(True)
             self.tabsView.setEnabled(True)
             self.jobsTab.signals.enable.emit(True)
+
+    def closeEvent(self, _) -> None:
+        '''When the main window closes, close all the other dialogs'''
+        app: QApplication = QApplication.instance()
+        if app is not None:
+            for widget in app.topLevelWidgets():
+                widget.close()
