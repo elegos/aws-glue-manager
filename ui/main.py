@@ -69,8 +69,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(topRightWidget, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.jobsTab = JobsTab()
-        self.jobsTab.refreshButton.clicked.connect(
-            lambda _: self.onTabSelected(0))
+        self.jobsTab.refreshButton.clicked.connect(self.onJobsDataRequested)
         self.workflowsTab = WorkflowsTab()
 
         self.tabsView = QTabWidget()
@@ -111,7 +110,7 @@ class MainWindow(QMainWindow):
     def onProfilesChanged(self) -> None:
         self.populateProfilePicklist()
 
-    def onProfileSelected(self, *args) -> None:
+    def onProfileSelected(self, *_) -> None:
         self.profile = next(
             (profile for profile in self.config.profiles if profile.label == self.profilePicklist.currentText()), None)
 
@@ -119,26 +118,29 @@ class MainWindow(QMainWindow):
             self._logger.info(f'Profile selected: {self.profile.label}')
             self.onTabSelected(self.tabsView.currentIndex())
 
+    def onJobsDataRequested(self, *_) -> None:
+        self.jobsTab.signals.jobsUpdated.emit([])
+        self.jobsTab.signals.jobRunsUpdated.emit([])
+
+        self.beforeAWSCall('Downloading jobs data...')
+        runnable = aws.getRunnable(aws.getJobs, self.profile)
+
+        runnable.signals.success.connect(self.onJobsDownloaded)
+        runnable.signals.success.connect(
+            lambda: self.afterAWSCall('Ready'))
+        runnable.signals.raised.connect(
+            lambda ex: self.onAWSException(ex, True))
+
+        self.threadPool.start(runnable)
+
     def onTabSelected(self, index) -> None:
-        if self.profile is None:
+        if self.profile is None or self.config.loadDataOnTabChange == False:
             self.statusProgressBar.setVisible(False)
             return
 
         # jobs
         if index == 0:
-            self.jobsTab.signals.jobsUpdated.emit([])
-            self.jobsTab.signals.jobRunsUpdated.emit([])
-
-            self.beforeAWSCall('Downloading jobs data...')
-            runnable = aws.getRunnable(aws.getJobs, self.profile)
-
-            runnable.signals.success.connect(self.onJobsDownloaded)
-            runnable.signals.success.connect(
-                lambda: self.afterAWSCall('Ready'))
-            runnable.signals.raised.connect(
-                lambda ex: self.onAWSException(ex, True))
-
-            self.threadPool.start(runnable)
+            self.onJobsDataRequested()
         elif index == 1:
             # workflows
             # self.beforeAWSCall('Downloading workflows data...')

@@ -1,33 +1,20 @@
-from ui.icon import QSVGIcon
-from lib import aws
-from typing import Dict, List, Tuple
+from typing import Dict, List
+
+from PyQt5.QtGui import QStandardItemModel
+
 from PyQt5.QtCore import QObject, QSize, QTimer, pyqtSignal
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QTableView, QTextEdit, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (QHBoxLayout, QLineEdit, QPushButton, QTableView,
+                             QTextEdit, QVBoxLayout, QWidget)
 
+from lib import aws
+from ui.icon import QSVGIcon
+from ui.tabs.common import decorateTable, QReadOnlyItem
 
-def decorateTable(table: QTableView, *columns: Tuple[str, int]) -> None:
-    model = QStandardItemModel()
-    model.setHorizontalHeaderLabels([column[0] for column in columns])
-    table.setModel(model)
-    table.verticalHeader().setVisible(False)
-
-    for i in range(len(columns)):
-        table.setColumnWidth(i, columns[i][1])
-
-
-def getTableModel(columnNames: List[str]) -> QStandardItemModel:
-    model = QStandardItemModel()
-    model.setHorizontalHeaderLabels(columnNames)
-
-    return model
-
-
-class QReadOnlyItem(QStandardItem):
-    def __init__(self, *args) -> None:
-        super().__init__(*args)
-
-        self.setEditable(False)
+jobColumns = [
+    ('', 16), ('Name', 330),
+    ('Last execution', 146), ('Duration', 80),
+    ('Result', 140), ('Error message', 244)
+]
 
 
 class TabViewSignals(QObject):
@@ -37,13 +24,6 @@ class TabViewSignals(QObject):
 class JobsSignals(TabViewSignals):
     jobsUpdated = pyqtSignal(list)
     jobRunsUpdated = pyqtSignal(list)
-
-
-jobColumns = [
-    ('', 16), ('Name', 330),
-    ('Last execution', 146), ('Duration', 80),
-    ('Result', 140), ('Error message', 244)
-]
 
 
 class JobsTab(QWidget):
@@ -186,27 +166,3 @@ class JobsTab(QWidget):
             errorItem = QReadOnlyItem(jobRuns[0].ErrorMessage)
             errorItem.setToolTip(jobRuns[0].ErrorMessage)
             model.setItem(row, 5, errorItem)
-
-
-class WorkflowsTab(QWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        layout = QVBoxLayout()
-
-        self.filter = QLineEdit()
-        self.filter.setPlaceholderText(
-            'free text | field : value | filter 1; filter 2; ...')
-
-        self.table = QTableView()
-        decorateTable(self.table, ('', 16), ('Name', 220),
-                      ('Last exec date', 140), ('Last exec duration', 140),
-                      ('Last exec result', 140), ('Last jobs executed / total', 230))
-
-        layout.addWidget(self.filter)
-        layout.addWidget(self.table, stretch=1)
-
-        self.setLayout(layout)
-
-        # self.table.horizontalHeader().sectionResized.connect(
-        #     lambda col, oldW, newW: logging.getLogger().debug(f'{col} {newW}'))

@@ -52,6 +52,7 @@ class AWSProfile:
 
 @dataclass
 class Settings:
+    loadDataOnTabChange: bool = field(default=False)
     profiles: List[AWSProfile] = field(default_factory=lambda: [])
 
     def loadFromArgs(self, **kwargs) -> None:

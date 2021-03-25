@@ -37,3 +37,12 @@ class ConfigManagerTestCase(TestCase):
         self.manager.load()
 
         self.assertEqual([profile], self.manager.profiles)
+
+    def test_load_with_loadDataOnTabChange(self):
+        self.assertFalse(self.manager.loadDataOnTabChange)
+        self.manager.loadDataOnTabChange = True
+
+        self.manager.save()
+        self.manager.load()
+
+        self.assertTrue(self.manager.loadDataOnTabChange)
