@@ -56,14 +56,14 @@ class JobRun:
     ExecutionTime: int  # seconds
     Timeout: int  # minutes
     MaxCapacity: float
-    WorkerType: str
-    NumberOfWorkers: int
     LogGroupName: str
     GlueVersion: str
+    WorkerType: str = field(default='')
     ErrorMessage: str = field(default='')
     PredecessorRuns: list = field(default_factory=[])
     Arguments: Dict[str, str] = field(default_factory=lambda: {})
     NotificationProperty: Dict[str, Any] = field(default_factory=lambda: {})
+    NumberOfWorkers: Optional[int] = field(default=None)
     CompletedOn: Optional[datetime] = field(default=None)
     TriggerName: Optional[str] = field(default=None)
     PreviousRunId: Optional[str] = field(default=None)
