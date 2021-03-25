@@ -103,6 +103,7 @@ class JobsTab(QWidget):
 
             text = job.Name
             item = QReadOnlyItem(text)
+            item.setToolTip(text)
             tableModel.setItem(row, 1, item)
 
     def appendJobRuns(self, jobRuns: List[aws.JobRun]):
