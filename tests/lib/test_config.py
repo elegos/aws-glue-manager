@@ -26,23 +26,24 @@ class ConfigManagerTestCase(TestCase):
         tpl = config.Settings()
 
         for key in tpl.__dict__.keys():
-            self.assertEqual(getattr(tpl, key), getattr(self.manager, key))
+            self.assertEqual(getattr(tpl, key), getattr(
+                self.manager.settings, key))
 
     def test_load_with_profile(self):
         profile = config.AWSProfile(label='testProfile', region='test-central-1',
                                     accessKey='accessKey', secretAccessKey='secretAccessKey')
 
-        self.manager.profiles.append(profile)
+        self.manager.settings.profiles.append(profile)
         self.manager.save()
         self.manager.load()
 
-        self.assertEqual([profile], self.manager.profiles)
+        self.assertEqual([profile], self.manager.settings.profiles)
 
     def test_load_with_loadDataOnTabChange(self):
-        self.assertFalse(self.manager.loadDataOnTabChange)
-        self.manager.loadDataOnTabChange = True
+        self.assertFalse(self.manager.settings.loadDataOnTabChange)
+        self.manager.settings.loadDataOnTabChange = True
 
         self.manager.save()
         self.manager.load()
 
-        self.assertTrue(self.manager.loadDataOnTabChange)
+        self.assertTrue(self.manager.settings.loadDataOnTabChange)

@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
     def populateProfilePicklist(self) -> None:
         self.profilePicklist.clear()
         self.profilePicklist.addItems(
-            [profile.label for profile in self.config.profiles])
+            [profile.label for profile in self.config.settings.profiles])
 
     def onSettingsButtonClick(self, *args) -> None:
         dialog = QSettingsDialog(configManager=self.config)
@@ -112,7 +112,7 @@ class MainWindow(QMainWindow):
 
     def onProfileSelected(self, *_) -> None:
         self.profile = next(
-            (profile for profile in self.config.profiles if profile.label == self.profilePicklist.currentText()), None)
+            (profile for profile in self.config.settings.profiles if profile.label == self.profilePicklist.currentText()), None)
 
         if self.profile is not None:
             self._logger.info(f'Profile selected: {self.profile.label}')
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         self.threadPool.start(runnable)
 
     def onTabSelected(self, index) -> None:
-        if self.profile is None or self.config.loadDataOnTabChange == False:
+        if self.profile is None or self.config.settings.loadDataOnTabChange == False:
             self.statusProgressBar.setVisible(False)
             return
 

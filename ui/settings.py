@@ -3,7 +3,7 @@ import logging
 from ui.alertDialog import QAlertDialog
 from PyQt5.QtCore import QObject, pyqtSignal
 from lib.config import AWSProfile, ConfigManager
-from PyQt5.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
 
 class SettingsSignals(QObject):
@@ -99,6 +99,13 @@ class QSettingsDialog(QDialog):
         buttonsWidget.setLayout(buttonsLayout)
         layout.addWidget(buttonsWidget)
 
+        loadDataOnTabChangeCheckbox = QCheckBox('Load data on tab change')
+        loadDataOnTabChangeCheckbox.setChecked(
+            self.config.settings.loadDataOnTabChange)
+        loadDataOnTabChangeCheckbox.toggled.connect(
+            self.onLoadDataOnTabChangeToggled)
+        layout.addWidget(loadDataOnTabChangeCheckbox)
+
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
         buttonBox.accepted.connect(self.accepted)
         layout.addWidget(buttonBox)
@@ -118,7 +125,7 @@ class QSettingsDialog(QDialog):
     def populateProfilesPicklist(self) -> None:
         self.profilePicklist.clear()
         self.profilePicklist.addItems(
-            [profile.label for profile in self.config.profiles])
+            [profile.label for profile in self.config.settings.profiles])
 
     def onNewProfile(self, *args) -> None:
         dialog = QProfileEditDialog(
@@ -131,7 +138,7 @@ class QSettingsDialog(QDialog):
 
     def onProfileEdit(self, *args) -> None:
         profile: AWSProfile = next(
-            (profile for profile in self.config.profiles if profile.label == self.profilePicklist.currentText()))
+            (profile for profile in self.config.settings.profiles if profile.label == self.profilePicklist.currentText()))
         dialog = QProfileEditDialog(
             title='Edit profile', label=profile.label,
             region=profile.region, accessKey=profile.accessKey,
@@ -145,7 +152,7 @@ class QSettingsDialog(QDialog):
 
     def onProfileChange(self, dialog: QProfileEditDialog) -> None:
         profile = next(
-            (profile for profile in self.config.profiles if profile.label == dialog.originalLabel), None)
+            (profile for profile in self.config.settings.profiles if profile.label == dialog.originalLabel), None)
         found = profile is not None
         if not found:
             profile = AWSProfile()
@@ -158,14 +165,14 @@ class QSettingsDialog(QDialog):
         # New profile, add it to the list
         # otherwise the object will keep the changes
         if not found:
-            self.config.profiles.append(profile)
+            self.config.settings.profiles.append(profile)
             self._logger.info(f'Created profile "{profile.label}"')
         else:
             self._logger.info(f'Edited profile "{profile.label}"')
 
         self.populateProfilesPicklist()
         self.manageProfileButtonStates()
-        self.signals.profilesModified.emit()
+        self.signals.settings.profilesModified.emit()
 
         dialog.close()
 
@@ -180,9 +187,12 @@ class QSettingsDialog(QDialog):
         dialog.exec_()
 
     def onProfileDeleted(self, profile: AWSProfile) -> None:
-        self.config.profiles.pop(self.config.profiles.index(profile))
+        self.config.settings.profiles.pop(self.config.profiles.index(profile))
         self._logger.info(f'Deleted profile "{profile.label}"')
 
         self.populateProfilesPicklist()
         self.manageProfileButtonStates()
-        self.signals.profilesModified.emit()
+        self.signals.settings.profilesModified.emit()
+
+    def onLoadDataOnTabChangeToggled(self, checked: bool) -> None:
+        self.config.settings.loadDataOnTabChange = checked

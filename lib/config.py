@@ -15,14 +15,6 @@ class UnsupportedPlatformException(Exception):
         super().__init__(f'Unsupported platform: {platform.system()}')
 
 
-class InvalidSettingException(Exception):
-    def __init__(self, name: str, sType: type, expectedType: Optional[type]):
-        expectedType = str(
-            expectedType) if expectedType is not None else 'None'
-        super().__init__(
-            f'Unexpected setting: "{name}" (found: {str(sType)}, expected: {expectedType})')
-
-
 @dataclass
 class AWSProfile:
     label: str = field(default='')
@@ -61,22 +53,26 @@ class Settings:
                 profile = AWSProfile()
                 profile.loadFromArgs(**profileData)
                 self.profiles.append(profile)
+        if 'loadDataOnTabChange' in kwargs and isinstance(kwargs['loadDataOnTabChange'], bool):
+            self.loadDataOnTabChange = kwargs['loadDataOnTabChange']
 
     def asDict(self):
         return {
-            'profiles': [profile.asDict() for profile in self.profiles]
+            'profiles': [profile.asDict() for profile in self.profiles],
+            'loadDataOnTabChange': self.loadDataOnTabChange,
         }
 
 
 class ConfigManager:
     configRoot: str = ''
-    _settings: Settings
+    settings: Settings
+    settings: Settings
 
     def __init__(self, appId=const.appId):
         '''
         Raise config.UnsupportedPlatformException
         '''
-        super().__setattr__('_settings', Settings())
+        self.settings = Settings()
 
         sysName = platform.system().lower()
         if sysName == 'linux':
@@ -105,7 +101,7 @@ class ConfigManager:
         configPath = self._configPath()
 
         if not path.exists(configPath):
-            self._settings = Settings()
+            self.settings = Settings()
 
             return
 
@@ -115,11 +111,11 @@ class ConfigManager:
             if kwargs is not None:
                 settings.loadFromArgs(**kwargs)
 
-            self._settings = settings
+            self.settings = settings
 
     def save(self) -> None:
         self._createConfigDir()
-        text = json.dumps(self._settings.asDict())
+        text = json.dumps(self.settings.asDict())
 
         with open(self._configPath(), 'w') as fHandler:
             fHandler.write(text)
@@ -129,32 +125,3 @@ class ConfigManager:
             shutil.rmtree(path.dirname(self._configPath()))
         finally:
             pass
-
-    def __getattribute__(self, name: str) -> Any:
-        try:
-            return super().__getattribute__(name)
-        except Exception:
-            pass
-
-        settings = super().__getattribute__('_settings')
-        if settings is not None and hasattr(settings, name):
-            return getattr(settings, name)
-
-        return None
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        '''
-        Raise config.InvalidSettingException
-        '''
-
-        if hasattr(self, name):
-            return super().__setattr__(name, value)
-
-        templateSettings = Settings()
-        expectedType = type(templateSettings[name]) if hasattr(
-            templateSettings, name) else None
-
-        if expectedType is not None and isinstance(value, expectedType):
-            self._settings[name] = value
-
-        raise InvalidSettingException(name, type(value), expectedType)
