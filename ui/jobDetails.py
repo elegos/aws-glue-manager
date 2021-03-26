@@ -1,5 +1,6 @@
 import logging
 from typing import List
+from ui.termDescription import QTermDescription
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWidgets import QLabel, QTableView, QVBoxLayout, QWidget
@@ -26,9 +27,24 @@ class QJobDetails(QWidget):
         mainLayout = QVBoxLayout()
         self.setLayout(mainLayout)
 
-        mainLayout.addWidget(QLabel(f'Name: {job.Name}'))
+        connections = ', '.join(
+            job.Connections['Connections'] if 'Connections' in job.Connections else [])
+        if connections == '':
+            connections = 'None'
+        td = QTermDescription([
+            ('Name', job.Name),
+            ('Description', job.Description),
+            ('Connections', connections),
+            ('IAM Role', job.Role),
+            ('Worker Type', job.WorkerType),
+            ('Glue Version', job.GlueVersion),
+            ('Allocated capacity', str(job.AllocatedCapacity)),
+            ('Maximum capacity', str(job.MaxCapacity)),
+            ('Timeout', f'{timeUtils.fromTimeToString(minutes=job.Timeout)}'),
+        ])
+        mainLayout.addWidget(td)
 
-        self.setMinimumSize(QSize(1117, 500))
+        self.setMinimumSize(QSize(1117, 800))
 
         self.runsTable = QTableView()
         decorateTable(self.runsTable, ('Id', 150), ('State', 120), ('Error', 220),
