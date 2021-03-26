@@ -5,7 +5,7 @@ from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWidgets import (QHBoxLayout, QLineEdit, QPushButton, QTableView,
                              QTextEdit, QVBoxLayout, QWidget)
 
-from lib import aws
+from lib import aws, timeUtils
 from ui.icon import QSVGIcon
 from ui.jobDetails import QJobDetails
 from ui.tabs.common import QReadOnlyItem, decorateTable
@@ -109,9 +109,8 @@ class JobsTab(QWidget):
             job = self.jobs[row]
 
             text = job.Name
-            item = QReadOnlyItem(text)
-            item.setToolTip(text)
-            tableModel.setItem(row, 1, item)
+            tableModel.setItem(row, 1, QReadOnlyItem(
+                text=text, withAutoTooltip=True))
 
     def appendJobRuns(self, jobRuns: List[aws.JobRun]):
         if self.jobRunDetailsTimer.isActive():
@@ -155,23 +154,19 @@ class JobsTab(QWidget):
                 iconSvg = 'cloud-lightning.svg'
 
             icon = QSVGIcon(iconSvg)
-            model.setItem(row, 0, QReadOnlyItem(icon, ''))
+            model.setItem(row, 0, QReadOnlyItem(icon, False, ''))
 
             lastExecDate = jobRuns[0].StartedOn
             lastDuration = jobRuns[0].ExecutionTime
 
-            hours = int(lastDuration / 60 / 60)
-            remainingSeconds = lastDuration - hours * 60 * 60
-            minutes = int(remainingSeconds / 60)
-            seconds = remainingSeconds - minutes * 60
-
             model.setItem(row, 2, QReadOnlyItem(
                 lastExecDate.strftime('%Y-%m-%d %H:%M:%S')))
             model.setItem(row, 3, QReadOnlyItem(
-                f'{hours:02d}:{minutes:02d}:{seconds:02d}'))
+                timeUtils.fromTimeToString(seconds=lastDuration)))
             model.setItem(row, 4, QReadOnlyItem(jobRuns[0].JobRunState))
 
-            errorItem = QReadOnlyItem(jobRuns[0].ErrorMessage)
+            errorItem = QReadOnlyItem(
+                jobRuns[0].ErrorMessage, withAutoTooltip=True)
             errorItem.setToolTip(jobRuns[0].ErrorMessage)
             model.setItem(row, 5, errorItem)
 

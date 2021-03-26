@@ -1,5 +1,5 @@
-from typing import Tuple
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from typing import Tuple, Union
+from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import QTableView
 
 
@@ -14,7 +14,21 @@ def decorateTable(table: QTableView, *columns: Tuple[str, int]) -> None:
 
 
 class QReadOnlyItem(QStandardItem):
-    def __init__(self, *args) -> None:
+    withAutoTooltip: bool
+
+    def __init__(self, text: Union[str, QIcon], withAutoTooltip: bool = False, *args) -> None:
+        if isinstance(text, QIcon):
+            super().__init__(text, *args)
+            return
+
         super().__init__(*args)
 
         self.setEditable(False)
+        self.withAutoTooltip = withAutoTooltip
+        self.setText(text)
+
+    def setText(self, text: str) -> None:
+        super().setText(text)
+
+        if self.withAutoTooltip:
+            self.setToolTip(text)
