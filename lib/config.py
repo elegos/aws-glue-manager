@@ -5,7 +5,7 @@ import shutil
 from dataclasses import dataclass, field
 from os import path, getenv
 from os.path import expanduser
-from typing import Any, List, Optional
+from typing import List
 
 from lib import const, encryption
 
@@ -46,26 +46,29 @@ class AWSProfile:
 class Settings:
     loadDataOnTabChange: bool = field(default=False)
     profiles: List[AWSProfile] = field(default_factory=lambda: [])
+    defaultProfile: str = field(default='')
 
     def loadFromArgs(self, **kwargs) -> None:
-        if 'profiles' in kwargs and isinstance(kwargs['profiles'], list):
-            for profileData in kwargs['profiles']:
-                profile = AWSProfile()
-                profile.loadFromArgs(**profileData)
-                self.profiles.append(profile)
-        if 'loadDataOnTabChange' in kwargs and isinstance(kwargs['loadDataOnTabChange'], bool):
-            self.loadDataOnTabChange = kwargs['loadDataOnTabChange']
+        for key in self.__dict__.keys():
+            if key in kwargs and isinstance(kwargs[key], type(getattr(self, key))):
+                if key == 'profiles':
+                    for profileData in kwargs[key]:
+                        profile = AWSProfile()
+                        profile.loadFromArgs(**profileData)
+                        self.profiles.append(profile)
+                else:
+                    setattr(self, key, kwargs[key])
 
     def asDict(self):
         return {
             'profiles': [profile.asDict() for profile in self.profiles],
+            'defaultProfile': self.defaultProfile,
             'loadDataOnTabChange': self.loadDataOnTabChange,
         }
 
 
 class ConfigManager:
     configRoot: str = ''
-    settings: Settings
     settings: Settings
 
     def __init__(self, appId=const.appId):

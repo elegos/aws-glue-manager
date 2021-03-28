@@ -50,6 +50,11 @@ class MainWindow(QMainWindow):
         self.profilePicklist = QComboBox()
         self.profilePicklist.setMinimumWidth(220)
         self.populateProfilePicklist()
+        defaultProfile = self.config.settings.defaultProfile
+        defaultProfile = next(
+            (profile.label for profile in self.config.settings.profiles if profile.accessKey == defaultProfile), '')
+        self.profilePicklist.setCurrentIndex(next((i for i in range(self.profilePicklist.count(
+        )) if self.profilePicklist.itemText(i) == defaultProfile), 0))
         self.profilePicklist.currentIndexChanged.connect(
             self.onProfileSelected)
 
@@ -115,6 +120,7 @@ class MainWindow(QMainWindow):
 
         if self.profile is not None:
             self._logger.info(f'Profile selected: {self.profile.label}')
+            self.config.settings.defaultProfile = self.profile.accessKey
             self.onTabSelected(self.tabsView.currentIndex())
 
     def onJobsDataRequested(self, *_) -> None:

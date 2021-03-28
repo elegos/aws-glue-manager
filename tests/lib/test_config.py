@@ -22,6 +22,10 @@ class ConfigManagerTestCase(TestCase):
         del(self.manager)
         rmtree(path.dirname(pathStr))
 
+    def saveAndReload(self) -> None:
+        self.manager.save()
+        self.manager.load()
+
     def test_load_default_settings(self):
         tpl = config.Settings()
 
@@ -34,8 +38,7 @@ class ConfigManagerTestCase(TestCase):
                                     accessKey='accessKey', secretAccessKey='secretAccessKey')
 
         self.manager.settings.profiles.append(profile)
-        self.manager.save()
-        self.manager.load()
+        self.saveAndReload()
 
         self.assertEqual([profile], self.manager.settings.profiles)
 
@@ -43,7 +46,16 @@ class ConfigManagerTestCase(TestCase):
         self.assertFalse(self.manager.settings.loadDataOnTabChange)
         self.manager.settings.loadDataOnTabChange = True
 
-        self.manager.save()
-        self.manager.load()
+        self.saveAndReload()
 
         self.assertTrue(self.manager.settings.loadDataOnTabChange)
+
+    def test_load_with_default_profile(self):
+        profile = '06e6ac4d-c144-4ba2-8bfa-f1a9c9f7ea0e'
+
+        self.assertEqual('', self.manager.settings.defaultProfile)
+        self.manager.settings.defaultProfile = profile
+
+        self.saveAndReload()
+
+        self.assertEqual(profile, self.manager.settings.defaultProfile)

@@ -1,9 +1,8 @@
-import logging
 from typing import List
 from ui.termDescription import QTermDescription
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel
-from PyQt5.QtWidgets import QLabel, QTableView, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QTableView, QVBoxLayout, QWidget
 
 from lib import aws, timeUtils
 from ui.tabs.common import QReadOnlyItem, decorateTable
