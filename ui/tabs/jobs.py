@@ -39,6 +39,8 @@ class JobsTab(QWidget):
 
     jobRunDetailsTimer: QTimer
 
+    statusIcons: Dict[str, QSVGIcon]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -50,6 +52,13 @@ class JobsTab(QWidget):
         self.jobs = []
         self.jobRuns = {}
         self.jobDialogs = {}
+
+        self.statusIcons = {
+            'sunny': QSVGIcon('sun.svg'),
+            'cloudy': QSVGIcon('cloud.svg'),
+            'rainy': QSVGIcon('cloud-rain.svg'),
+            'thunders': QSVGIcon('cloud-lightning'),
+        }
 
         self.jobRunDetailsTimer = QTimer()
         self.jobRunDetailsTimer.timeout.connect(self.populateJobRunDetails)
@@ -145,15 +154,14 @@ class JobsTab(QWidget):
             if totalRuns == 0:
                 continue
 
-            iconSvg = 'sun.svg'
+            icon = self.statusIcons['sunny']
             if failedRuns == 1:
-                iconSvg = 'cloud.svg'
+                icon = self.statusIcons['cloudy']
             elif failedRuns == 2:
-                iconSvg = 'cloud-rain.svg'
+                icon = self.statusIcons['rainy']
             elif failedRuns >= 3:
-                iconSvg = 'cloud-lightning.svg'
+                icon = self.statusIcons['thunders']
 
-            icon = QSVGIcon(iconSvg)
             model.setItem(row, 0, QReadOnlyItem(icon, False, ''))
 
             lastExecDate = jobRuns[0].StartedOn
