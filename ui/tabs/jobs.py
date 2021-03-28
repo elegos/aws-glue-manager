@@ -18,31 +18,34 @@ jobColumns = [
 ]
 
 
-def searchInObjectField(obj: object, key: str, value: str) -> bool:
-    if obj is None:
-        return True
-
-    if key not in obj.__dict__.keys():
+def searchInObjectField(obj: dict, key: str, value: str) -> bool:
+    if key not in obj.keys():
         return False
 
-    attr = getattr(obj, key)
-    if not isinstance(attr, str) or value not in attr:
+    attr = obj[key]
+    if not isinstance(attr, str) or value.lower() not in attr.lower():
         return False
 
     return True
 
 
-def searchInObjectFields(obj: object, value: str) -> bool:
-    keys = obj.__dict__.keys()
+def searchInObjectFieldFactory(key: str, value: str) -> Callable[[dict], bool]:
+    return lambda obj: searchInObjectField(obj, key, value)
+
+
+def searchInObjectFields(obj: dict, value: str) -> bool:
+    keys = obj.keys()
 
     for key in keys:
-        attr = getattr(obj, key)
-        if not isinstance(attr, str):
-            continue
-        if value in attr:
+        result = searchInObjectField(obj, key, value)
+        if result:
             return True
 
     return False
+
+
+def searchInObjectFieldsFactory(value: str) -> Callable[[dict], bool]:
+    return lambda obj: searchInObjectFields(obj, value)
 
 
 def jobFilterFactory(text: str, onlyRunJobs: bool) -> Callable[[aws.Job, Optional[aws.JobRun]], bool]:
@@ -62,17 +65,22 @@ def jobFilterFactory(text: str, onlyRunJobs: bool) -> Callable[[aws.Job, Optiona
             key = keyValue[0].strip()
             value = keyValue[1].strip()
 
-            filtersList.append(
-                lambda job: searchInObjectField(job, key, value))
+            filtersList.append(searchInObjectFieldFactory(key, value))
         except ValueError:
             value = filterStr.strip()
-            filtersList.append(lambda job: searchInObjectFields(job, value))
+            filtersList.append(searchInObjectFieldsFactory(value))
 
     def jobFilter(job: aws.Job, lastJobRun: Optional[aws.JobRun]) -> bool:
         if onlyRunJobs and lastJobRun is None:
             return False
 
-        return reduce(lambda x, y: x and y(job), filtersList, True) or reduce(lambda x, y: x and y(lastJobRun), filtersList, True)
+        obj = {
+            'Name': job.Name,
+            'Result': lastJobRun.JobRunState if lastJobRun is not None else None,
+            'Error message': lastJobRun.ErrorMessage if lastJobRun is not None else None,
+        }
+
+        return reduce(lambda x, y: x and y(obj), filtersList, True)
 
     return jobFilter
 
@@ -124,6 +132,8 @@ class JobsTab(QWidget):
         }
 
         self.jobRunDetailsTimer = QTimer()
+        self.jobRunDetailsTimer.setInterval(1000)
+        self.jobRunDetailsTimer.setSingleShot(True)
         self.jobRunDetailsTimer.timeout.connect(self.populateJobRunDetails)
         self.failedOnlyCheckbox = QCheckBox('Failed jobs only')
         self.failedOnlyCheckbox.toggled.connect(self._refreshTable)
@@ -135,6 +145,7 @@ class JobsTab(QWidget):
 
         self.filterTimer = QTimer()
         self.filterTimer.setInterval(500)
+        self.filterTimer.setSingleShot(True)
         self.filterTimer.timeout.connect(self._refreshTable)
         self.filterText = ''
         self.filter = QLineEdit()
@@ -189,7 +200,7 @@ class JobsTab(QWidget):
             if next((jr for jr in self.jobRuns[run.JobName] if jr.Id == run.Id), None) is None:
                 self.jobRuns[run.JobName].append(run)
 
-        self.jobRunDetailsTimer.start(1000)
+        self.jobRunDetailsTimer.start()
 
     def populateJobRunDetails(self):
         model = self.table.model()
@@ -250,7 +261,7 @@ class JobsTab(QWidget):
         rawFilters = self.filterText
         onlyRunJobs = False
         if self.failedOnlyCheckbox.isChecked():
-            rawFilters += '; JobRunState:FAILED'
+            rawFilters += '; Result:FAILED'
             onlyRunJobs = True
         jobFilter = jobFilterFactory(rawFilters, onlyRunJobs)
         jobs = [job for job in self.jobs if jobFilter(job, next(
