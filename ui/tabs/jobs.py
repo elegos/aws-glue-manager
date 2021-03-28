@@ -1,9 +1,9 @@
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 from functools import reduce
 
 from PyQt5.QtCore import QModelIndex, QObject, QSize, QTimer, pyqtSignal
 from PyQt5.QtGui import QStandardItemModel
-from PyQt5.QtWidgets import (QHBoxLayout, QLineEdit, QPushButton, QTableView,
+from PyQt5.QtWidgets import (QCheckBox, QHBoxLayout, QLineEdit, QPushButton, QTableView,
                              QTextEdit, QVBoxLayout, QWidget)
 
 from lib import aws, timeUtils
@@ -18,22 +18,25 @@ jobColumns = [
 ]
 
 
-def searchInJobField(job: aws.Job, key: str, value: str) -> bool:
-    if key not in job.__dict__.keys():
+def searchInObjectField(obj: object, key: str, value: str) -> bool:
+    if obj is None:
+        return True
+
+    if key not in obj.__dict__.keys():
         return False
 
-    attr = getattr(job, key)
+    attr = getattr(obj, key)
     if not isinstance(attr, str) or value not in attr:
         return False
 
     return True
 
 
-def searchInJobFields(job: aws.Job, value: str) -> bool:
-    keys = job.__dict__.keys()
+def searchInObjectFields(obj: object, value: str) -> bool:
+    keys = obj.__dict__.keys()
 
     for key in keys:
-        attr = getattr(job, key)
+        attr = getattr(obj, key)
         if not isinstance(attr, str):
             continue
         if value in attr:
@@ -42,7 +45,7 @@ def searchInJobFields(job: aws.Job, value: str) -> bool:
     return False
 
 
-def jobFilterFactory(text: str) -> Callable[[aws.Job], bool]:
+def jobFilterFactory(text: str, onlyRunJobs: bool) -> Callable[[aws.Job, Optional[aws.JobRun]], bool]:
     filters = text.split(';')
 
     filtersList = []
@@ -59,13 +62,17 @@ def jobFilterFactory(text: str) -> Callable[[aws.Job], bool]:
             key = keyValue[0].strip()
             value = keyValue[1].strip()
 
-            filtersList.append(lambda job: searchInJobField(job, key, value))
+            filtersList.append(
+                lambda job: searchInObjectField(job, key, value))
         except ValueError:
             value = filterStr.strip()
-            filtersList.append(lambda job: searchInJobFields(job, value))
+            filtersList.append(lambda job: searchInObjectFields(job, value))
 
-    def jobFilter(job: aws.Job) -> bool:
-        return reduce(lambda x, y: x and y(job), filtersList, True)
+    def jobFilter(job: aws.Job, lastJobRun: Optional[aws.JobRun]) -> bool:
+        if onlyRunJobs and lastJobRun is None:
+            return False
+
+        return reduce(lambda x, y: x and y(job), filtersList, True) or reduce(lambda x, y: x and y(lastJobRun), filtersList, True)
 
     return jobFilter
 
@@ -87,6 +94,7 @@ class JobsTab(QWidget):
     filter: QTextEdit
     table: QTableView
     refreshButton: QPushButton
+    failedOnlyCheckbox: QCheckBox
 
     jobs: List[aws.Job]
     jobRuns: Dict[str, List[aws.JobRun]]
@@ -117,6 +125,8 @@ class JobsTab(QWidget):
 
         self.jobRunDetailsTimer = QTimer()
         self.jobRunDetailsTimer.timeout.connect(self.populateJobRunDetails)
+        self.failedOnlyCheckbox = QCheckBox('Failed jobs only')
+        self.failedOnlyCheckbox.toggled.connect(self._refreshTable)
 
         layout = QVBoxLayout()
 
@@ -137,6 +147,7 @@ class JobsTab(QWidget):
         self.refreshButton.setIconSize(QSize(18, 18))
 
         filterLayout.addWidget(self.filter)
+        filterLayout.addWidget(self.failedOnlyCheckbox)
         filterLayout.addWidget(self.refreshButton)
         filterWidget.setLayout(filterLayout)
 
@@ -236,8 +247,14 @@ class JobsTab(QWidget):
         self.jobDialogs[job.Name] = detailsWindow
 
     def _refreshTable(self) -> None:
-        jobFilter = jobFilterFactory(self.filterText)
-        jobs = [job for job in self.jobs if jobFilter(job)]
+        rawFilters = self.filterText
+        onlyRunJobs = False
+        if self.failedOnlyCheckbox.isChecked():
+            rawFilters += '; JobRunState:FAILED'
+            onlyRunJobs = True
+        jobFilter = jobFilterFactory(rawFilters, onlyRunJobs)
+        jobs = [job for job in self.jobs if jobFilter(job, next(
+            (runs[0] for name, runs in self.jobRuns.items() if name == job.Name and len(runs) > 0), None))]
 
         tableModel: QStandardItemModel = self.table.model()
 
