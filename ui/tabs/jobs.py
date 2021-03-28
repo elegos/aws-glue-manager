@@ -1,4 +1,5 @@
-from typing import Dict, List
+from typing import Callable, Dict, List
+from functools import reduce
 
 from PyQt5.QtCore import QModelIndex, QObject, QSize, QTimer, pyqtSignal
 from PyQt5.QtGui import QStandardItemModel
@@ -17,6 +18,58 @@ jobColumns = [
 ]
 
 
+def searchInJobField(job: aws.Job, key: str, value: str) -> bool:
+    if key not in job.__dict__.keys():
+        return False
+
+    attr = getattr(job, key)
+    if not isinstance(attr, str) or value not in attr:
+        return False
+
+    return True
+
+
+def searchInJobFields(job: aws.Job, value: str) -> bool:
+    keys = job.__dict__.keys()
+
+    for key in keys:
+        attr = getattr(job, key)
+        if not isinstance(attr, str):
+            continue
+        if value in attr:
+            return True
+
+    return False
+
+
+def jobFilterFactory(text: str) -> Callable[[aws.Job], bool]:
+    filters = text.split(';')
+
+    filtersList = []
+
+    for filterStr in filters:
+        if filterStr == '':
+            continue
+
+        key = None
+        value = None
+        try:
+            filterStr.index(':')
+            keyValue = filterStr.split(':')
+            key = keyValue[0].strip()
+            value = keyValue[1].strip()
+
+            filtersList.append(lambda job: searchInJobField(job, key, value))
+        except ValueError:
+            value = filterStr.strip()
+            filtersList.append(lambda job: searchInJobFields(job, value))
+
+    def jobFilter(job: aws.Job) -> bool:
+        return reduce(lambda x, y: x and y(job), filtersList, True)
+
+    return jobFilter
+
+
 class TabViewSignals(QObject):
     enable = pyqtSignal(bool)
 
@@ -29,6 +82,8 @@ class JobsSignals(TabViewSignals):
 class JobsTab(QWidget):
     signals: JobsSignals
 
+    filterTimer: QTimer
+    filterText: str
     filter: QTextEdit
     table: QTableView
     refreshButton: QPushButton
@@ -68,9 +123,14 @@ class JobsTab(QWidget):
         filterWidget = QWidget()
         filterLayout = QHBoxLayout()
 
+        self.filterTimer = QTimer()
+        self.filterTimer.setInterval(500)
+        self.filterTimer.timeout.connect(self._refreshTable)
+        self.filterText = ''
         self.filter = QLineEdit()
         self.filter.setPlaceholderText(
             'free text | field : value | filter 1; filter 2; ...')
+        self.filter.textChanged.connect(self.onFilterChanged)
 
         self.refreshButton = QPushButton()
         self.refreshButton.setIcon(QSVGIcon('refresh-cw.svg'))
@@ -106,20 +166,7 @@ class JobsTab(QWidget):
         if len(jobs) == 0:
             self.jobRuns = {}
 
-        self.showJobs()
-
-    def showJobs(self):
-        tableModel: QStandardItemModel = self.table.model()
-
-        if tableModel.rowCount() > 0:
-            tableModel.removeRows(0, tableModel.rowCount())
-
-        for row in range(len(self.jobs)):
-            job = self.jobs[row]
-
-            text = job.Name
-            tableModel.setItem(row, 1, QReadOnlyItem(
-                text=text, withAutoTooltip=True))
+        self._refreshTable()
 
     def appendJobRuns(self, jobRuns: List[aws.JobRun]):
         if self.jobRunDetailsTimer.isActive():
@@ -135,12 +182,11 @@ class JobsTab(QWidget):
 
     def populateJobRunDetails(self):
         model = self.table.model()
-        rowsCount = model.rowCount()
-        for row in range(rowsCount):
-            jobName = model.itemData(model.index(row, 1)).get(0)
-
-            jobRuns = self.jobRuns[jobName] if jobName in self.jobRuns else None
-            if jobRuns == None:
+        for jobName, jobRuns in self.jobRuns.items():
+            row = next((i for i in range(model.rowCount())
+                        if model.item(i, 1).text() == jobName), None)
+            # The job has been filtered out
+            if row is None:
                 continue
 
             jobRuns.sort(key=lambda run: run.StartedOn, reverse=True)
@@ -188,3 +234,31 @@ class JobsTab(QWidget):
         detailsWindow = QJobDetails(job, jobRuns)
         detailsWindow.show()
         self.jobDialogs[job.Name] = detailsWindow
+
+    def _refreshTable(self) -> None:
+        jobFilter = jobFilterFactory(self.filterText)
+        jobs = [job for job in self.jobs if jobFilter(job)]
+
+        tableModel: QStandardItemModel = self.table.model()
+
+        # Clean up the table
+        if tableModel.rowCount() > 0:
+            tableModel.removeRows(0, tableModel.rowCount())
+
+        # Fill the job names
+        for row in range(len(jobs)):
+            job = jobs[row]
+
+            tableModel.setItem(row, 1, QReadOnlyItem(
+                text=job.Name, withAutoTooltip=True))
+
+        # Fill the job run defails
+        self.populateJobRunDetails()
+
+    def onFilterChanged(self, text: str) -> None:
+        if self.filterTimer.isActive():
+            self.filterTimer.stop()
+
+        self.filterText = text
+
+        self.filterTimer.start()
