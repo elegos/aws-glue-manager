@@ -1,15 +1,19 @@
-from typing import Callable, Dict, List, Optional
+import itertools
+from datetime import datetime, timedelta
 from functools import reduce
+from typing import Callable, Dict, List, Optional
 
 from PyQt5.QtCore import QModelIndex, QObject, QSize, QTimer, pyqtSignal
 from PyQt5.QtGui import QStandardItemModel
-from PyQt5.QtWidgets import (QCheckBox, QHBoxLayout, QLineEdit, QPushButton, QTableView,
-                             QTextEdit, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (QCheckBox, QHBoxLayout, QLineEdit, QPushButton,
+                             QTableView, QTextEdit, QVBoxLayout, QWidget)
+import tzlocal
 
 from lib import aws, timeUtils
 from ui.icon import QSVGIcon
 from ui.jobDetails import QJobDetails
 from ui.tabs.common import QReadOnlyItem, decorateTable
+from ui.tabs.job_chart import QJobsChartWindow
 
 jobColumns = [
     ('', 16), ('Name', 330),
@@ -112,6 +116,8 @@ class JobsTab(QWidget):
 
     statusIcons: Dict[str, QSVGIcon]
 
+    dpuUsageWindow: QJobsChartWindow
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -167,7 +173,23 @@ class JobsTab(QWidget):
 
         self.table.doubleClicked.connect(self.onTableDoubleClick)
 
+        last24HoursDPUButton = QPushButton('Show DPU usage (last 24 hours)')
+
+        def showDPUUsage():
+            toDT = datetime.now(tz=tzlocal.get_localzone())
+            fromDT = toDT - timedelta(days=1)
+            self.dpuUsageWindow = QJobsChartWindow(
+                fromDT=fromDT,
+                toDT=toDT,
+                jobRuns=list(itertools.chain(*list(self.jobRuns.values()))),
+                interval=timedelta(minutes=1)
+            )
+            self.dpuUsageWindow.show()
+
+        last24HoursDPUButton.pressed.connect(showDPUUsage)
+
         layout.addWidget(filterWidget)
+        layout.addWidget(last24HoursDPUButton)
         layout.addWidget(self.table, stretch=1)
 
         self.setLayout(layout)
