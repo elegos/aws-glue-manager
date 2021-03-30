@@ -247,15 +247,19 @@ class JobsTab(QWidget):
             model.setItem(row, 5, errorItem)
 
     def onTableDoubleClick(self, index: QModelIndex):
-        job = self.jobs[index.row()]
-        jobRuns = self.jobRuns[job.Name] if job.Name in self.jobRuns else []
+        model: QStandardItemModel = self.table.model()
+        jobNameItem: QReadOnlyItem = model.item(index.row(), 1)
+        jobName = jobNameItem.text()
 
-        if job.Name in self.jobDialogs:
-            del(self.jobDialogs[job.Name])
+        job = next(job for job in self.jobs if job.Name == jobName)
+        jobRuns = self.jobRuns[jobName] if jobName in self.jobRuns else []
+
+        if jobName in self.jobDialogs:
+            del(self.jobDialogs[jobName])
 
         detailsWindow = QJobDetails(job, jobRuns)
         detailsWindow.show()
-        self.jobDialogs[job.Name] = detailsWindow
+        self.jobDialogs[jobName] = detailsWindow
 
     def _refreshTable(self) -> None:
         rawFilters = self.filterText
