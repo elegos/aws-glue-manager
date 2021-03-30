@@ -4,8 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.3 - Unreleased]
-### Added
+
+## [0.0.3] - 2021-03-30
 ### Changed
 - Fixed: show the wrong job details when double clicking on the filtered jobs list (jobs tab)
-### Removed
+- Fixed: do not update / show the correct jobs in the jobs list when the refresh action is requested (jobs tab)
