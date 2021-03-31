@@ -88,10 +88,10 @@ class QJobsChartWindow(QWidget):
     numJobsSeries: QLineSeries
 
     def __init__(
-            self, fromDT: datetime, toDT: datetime,
-            jobRuns: List[aws.JobRun],
-            interval: timedelta = timedelta(minutes=15),
-            *args, **kwargs,
+        self, fromDT: datetime, toDT: datetime,
+        jobRuns: List[aws.JobRun],
+        interval: timedelta = timedelta(minutes=15),
+        *args, **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 
