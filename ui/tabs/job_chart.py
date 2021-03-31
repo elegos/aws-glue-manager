@@ -21,6 +21,32 @@ def runInRange(job: aws.JobRun, rangeStart: datetime, rangeEnd: datetime) -> boo
     return (rangeStart <= start < rangeEnd) or (rangeStart <= end < rangeEnd)
 
 
+def getClosestPointsInChart(ls: List[QPointF], x: float, numPoints: int = 1) -> List[QPointF]:
+    ls = copy.deepcopy(ls)
+    result = []
+    for _ in range(numPoints):
+        if len(ls) == 0:
+            break
+
+        point = min(ls, key=lambda point: abs(x - point.x()))
+        result.append(point)
+        ls.remove(point)
+
+    return result
+
+
+def weightedPointsValues(points: List[QPointF], singlePoint: float):
+    points.sort(key=lambda point: point.x())
+    xValues = [point.x() for point in points]
+    yValues = [point.y() for point in points]
+
+    weights = list(reversed([abs(point.x() - singlePoint)
+                   for point in points]))
+    totWeights = reduce(lambda x, y: x + y, weights, 0)
+
+    return reduce(lambda x, y: x + y, [value * weights[i] for i, value in enumerate(yValues)], 0) / totWeights
+
+
 class QJobsChartWindow(QWidget):
     jobRuns: List[aws.JobRun]
     fromDatetime: datetime
@@ -60,8 +86,9 @@ class QJobsChartWindow(QWidget):
         chart.setAcceptHoverEvents(True)
 
         self.dpuSeries, self.numJobsSeries = self.getSeries()
-        self.dpuSeries.hovered.connect(self.valueDatetimeChartTooltip)
-        self.numJobsSeries.hovered.connect(self.valueDatetimeChartTooltip)
+        # Not ready yet
+        # self.dpuSeries.hovered.connect(self.valueDatetimeChartTooltip)
+        # self.numJobsSeries.hovered.connect(self.valueDatetimeChartTooltip)
 
         chart.addSeries(self.dpuSeries)
         chart.addSeries(self.numJobsSeries)
@@ -77,6 +104,17 @@ class QJobsChartWindow(QWidget):
 
         yNumJobsAxis = QValueAxis()
         yNumJobsAxis.setTitleText("Num jobs")
+
+        # We probably need two separated charts
+        if len(self.jobRuns) > 0:
+            # Upper part of the chart
+            yDPUAxis.setMin(reduce(lambda x, point: max(
+                x, point.y()), self.dpuSeries.pointsVector(), 0) * (-1))
+            yDPUAxis.setMax(reduce(lambda x, point: max(
+                x, point.y()), self.dpuSeries.pointsVector(), 0))
+            # Lower part of the chart
+            yNumJobsAxis.setMax(reduce(lambda x, point: max(
+                x, point.y()), self.numJobsSeries.pointsVector(), 0) * 2)
 
         chart.addAxis(xAxis, Qt.AlignBottom)
         chart.addAxis(yDPUAxis, Qt.AlignLeft)
@@ -139,10 +177,14 @@ class QJobsChartWindow(QWidget):
         x = int(point.x())
 
         time = datetime.fromtimestamp(x/1000).strftime("%H:%M")
-        dpu = min(self.dpuSeries.pointsVector(),
-                  key=lambda point: abs(x-point.x())).y()
-        jobs = min(self.numJobsSeries.pointsVector(),
-                   key=lambda point: abs(x-point.x())).y()
+        dpuPoints = getClosestPointsInChart(
+            self.dpuSeries.pointsVector(), point.x(), 2)
+        numJobsPoints = getClosestPointsInChart(
+            self.numJobsSeries.pointsVector(), point.x(), 2)
+
+        # Not working as intended, yet
+        dpu = weightedPointsValues(dpuPoints, x)
+        jobs = weightedPointsValues(numJobsPoints, x)
 
         self.coordsLabel.setText(
             'Time ({time}), DPU: {dpu}, Job runs: {jobRuns}'.format(
