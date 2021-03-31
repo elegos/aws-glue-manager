@@ -1,16 +1,45 @@
 import copy
 from datetime import datetime, timedelta
 from functools import reduce
-from typing import Iterator, List, Tuple
+from typing import Dict, Iterator, List, Tuple
 
 import tzlocal
 from PyQt5.QtChart import (QChart, QChartView, QDateTimeAxis, QLineSeries,
                            QValueAxis)
-from PyQt5.QtCore import QLine, Qt, QPointF
+from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from lib import aws
+
+
+def splitJobRunsByInterval(
+    runs: List[aws.JobRun],
+    fromDatetime: datetime,
+    toDatetime: datetime,
+    interval: timedelta
+) -> Dict[datetime, List[aws.JobRun]]:
+    result: Dict[datetime, List[aws.JobRun]] = {}
+
+    for run in runs:
+        if run.CompletedOn is not None and run.CompletedOn < fromDatetime:
+            continue
+
+        for timestamp in QJobsChartWindow.timeIterator(fromDatetime, toDatetime, interval):
+            frameEnd = timestamp + interval
+            # Started ahead
+            if run.StartedOn > frameEnd:
+                continue
+            # Ended before
+            if run.CompletedOn is not None and run.CompletedOn < timestamp:
+                break
+
+            if timestamp not in result:
+                result[timestamp] = []
+
+            result[timestamp].append(run)
+
+    return result
 
 
 def runInRange(job: aws.JobRun, rangeStart: datetime, rangeEnd: datetime) -> bool:
@@ -48,7 +77,7 @@ def weightedPointsValues(points: List[QPointF], singlePoint: float):
 
 
 class QJobsChartWindow(QWidget):
-    jobRuns: List[aws.JobRun]
+    jobRuns: Dict[datetime, List[aws.JobRun]]
     fromDatetime: datetime
     toDatetime: datetime
     timeInterval: timedelta
@@ -70,8 +99,11 @@ class QJobsChartWindow(QWidget):
         self.toDatetime = toDT
         self.timeInterval = interval
 
-        self.jobRuns = [run for run in jobRuns if run.StartedOn >=
-                        fromDT and (run.CompletedOn is None or run.CompletedOn <= toDT)]
+        filteredJobRuns = [run for run in jobRuns if run.StartedOn >=
+                           fromDT and (run.CompletedOn is None or run.CompletedOn <= toDT)]
+
+        self.jobRuns = splitJobRunsByInterval(
+            filteredJobRuns, self.fromDatetime, self.toDatetime, self.timeInterval)
 
         self.setWindowTitle('Job runs recap ({fromDT} / {toDT})'.format(
             fromDT=self.fromDatetime.strftime('%Y-%m-%d %H:%M:%S'),
@@ -108,7 +140,7 @@ class QJobsChartWindow(QWidget):
         yNumJobsAxis.setTitleText("Num jobs")
 
         # We probably need two separated charts
-        if len(self.jobRuns) > 0:
+        if len(self.jobRuns.items()) > 0:
             # Upper part of the chart
             yDPUAxis.setMin(reduce(lambda x, point: max(
                 x, point.y()), self.dpuSeries.pointsVector(), 0) * (-1))
@@ -142,14 +174,15 @@ class QJobsChartWindow(QWidget):
 
         self.setLayout(layout)
 
-    def timeIterator(self) -> Iterator[datetime]:
-        timestamp = self.fromDatetime
+    @staticmethod
+    def timeIterator(fromDatetime: datetime, toDatetime: datetime, timeInterval: timedelta) -> Iterator[datetime]:
+        timestamp = fromDatetime
         yield timestamp
 
-        timestamp += self.timeInterval
-        while(timestamp <= self.toDatetime):
+        timestamp += timeInterval
+        while(timestamp <= toDatetime):
             yield timestamp
-            timestamp += self.timeInterval
+            timestamp += timeInterval
 
     def getSeries(self) -> Tuple[QLineSeries, QLineSeries]:
         self.dpuSeries = QLineSeries()
@@ -158,20 +191,15 @@ class QJobsChartWindow(QWidget):
         self.numJobsSeries = QLineSeries()
         self.numJobsSeries.setName('N. jobs')
 
-        jobRunsList = copy.deepcopy(self.jobRuns)
-        for timestamp in self.timeIterator():
-            timestampEnd = timestamp + self.timeInterval
-            jobRuns = [run for run in jobRunsList if runInRange(
-                run, timestamp, timestampEnd)]
+        for timestamp in self.timeIterator(self.fromDatetime, self.toDatetime, self.timeInterval):
+            jobRuns = self.jobRuns[timestamp] if timestamp in self.jobRuns else [
+            ]
 
             dpu = reduce(lambda acc, run: acc +
                          run.AllocatedCapacity, jobRuns, 0)
             epochMs = int(timestamp.timestamp()*1000)
             self.dpuSeries.append(epochMs, dpu)
             self.numJobsSeries.append(epochMs, len(jobRuns))
-
-            jobRunsList = [
-                job for job in jobRunsList if job.CompletedOn is None or job.CompletedOn > timestampEnd]
 
         return self.dpuSeries, self.numJobsSeries
 
