@@ -86,9 +86,11 @@ class QJobsChartWindow(QWidget):
         chart.setAcceptHoverEvents(True)
 
         self.dpuSeries, self.numJobsSeries = self.getSeries()
-        # Not ready yet
-        # self.dpuSeries.hovered.connect(self.valueDatetimeChartTooltip)
-        # self.numJobsSeries.hovered.connect(self.valueDatetimeChartTooltip)
+        # TODO make valueDatetimeChartLabel work
+        self.dpuSeries.hovered.connect(
+            lambda point: self.singleValueDatetimeChartLabel('DPU', point))
+        self.numJobsSeries.hovered.connect(
+            lambda point: self.singleValueDatetimeChartLabel('Num. jobs', point))
 
         chart.addSeries(self.dpuSeries)
         chart.addSeries(self.numJobsSeries)
@@ -173,7 +175,16 @@ class QJobsChartWindow(QWidget):
 
         return self.dpuSeries, self.numJobsSeries
 
-    def valueDatetimeChartTooltip(self, point: QPointF) -> None:
+    def singleValueDatetimeChartLabel(self, label: str, point: QPointF) -> None:
+        time = datetime.fromtimestamp(point.x()/1000).strftime("%H:%M")
+        self.coordsLabel.setText(
+            'Time ({time}), {label}: {value:.2f}'.format(
+                time=time,
+                label=label,
+                value=point.y(),
+            ))
+
+    def valueDatetimeChartLabel(self, point: QPointF) -> None:
         x = int(point.x())
 
         time = datetime.fromtimestamp(x/1000).strftime("%H:%M")
