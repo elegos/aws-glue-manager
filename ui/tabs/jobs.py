@@ -116,7 +116,7 @@ class JobsTab(QWidget):
 
     statusIcons: Dict[str, QSVGIcon]
 
-    dpuUsageWindow: QJobsChartWindow
+    usageWindow: QJobsChartWindow
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -173,23 +173,23 @@ class JobsTab(QWidget):
 
         self.table.doubleClicked.connect(self.onTableDoubleClick)
 
-        last24HoursDPUButton = QPushButton('Show DPU usage (last 24 hours)')
+        last24HoursUsageButton = QPushButton('Show Glue usage (last 24 hours)')
 
-        def showDPUUsage():
+        def showUsage():
             toDT = datetime.now(tz=tzlocal.get_localzone())
             fromDT = toDT - timedelta(days=1)
-            self.dpuUsageWindow = QJobsChartWindow(
+            self.usageWindow = QJobsChartWindow(
                 fromDT=fromDT,
                 toDT=toDT,
                 jobRuns=list(itertools.chain(*list(self.jobRuns.values()))),
                 interval=timedelta(minutes=1)
             )
-            self.dpuUsageWindow.show()
+            self.usageWindow.show()
 
-        last24HoursDPUButton.pressed.connect(showDPUUsage)
+        last24HoursUsageButton.pressed.connect(showUsage)
 
         layout.addWidget(filterWidget)
-        layout.addWidget(last24HoursDPUButton)
+        layout.addWidget(last24HoursUsageButton)
         layout.addWidget(self.table, stretch=1)
 
         self.setLayout(layout)
