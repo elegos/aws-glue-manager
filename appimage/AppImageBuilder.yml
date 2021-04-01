@@ -1,0 +1,65 @@
+# appimage-builder recipe see https://appimage-builder.readthedocs.io for details
+version: 1
+script:
+  - rm -rf AppDir | true
+  - mkdir -p AppDir/usr/bin
+  - mkdir -p AppDir/usr/local/lib/agm
+  - cp ../dist/linux/AWSGlueManager/AWSGlueManager AppDir/usr/bin/AWSGlueManager
+  - cp ../dist/linux/AWSGlueManager/*.zip AppDir/
+  - for folder in `ls -1 -d ../dist/linux/AWSGlueManager/*/`; do cp -rf "$folder" AppDir/lib64/; done
+  - cp -rf ../dist/linux/AWSGlueManager/*.so AppDir/lib64/
+  - mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps/
+  - cp -rf ../dist/linux/AWSGlueManager/ui AppDir/usr/bin/
+  - cp ../dist/linux/AWSGlueManager/ui/icons/Arch_AWS-Glue_64.svg AppDir/usr/share/icons/hicolor/scalable/apps/awsgluemanager.svg
+AppDir:
+  path: ./AppDir
+  app_info:
+    id: name.giacomofurlan.AWSGlueManager
+    name: AWS Glue Manager
+    icon: awsgluemanager
+    version: latest
+    exec: usr/bin/AWSGlueManager
+    exec_args: $@
+  runtime:
+    env:
+      APPDIR_LIBRARY_PATH: $APPDIR/lib64
+  files:
+    include:
+    - /lib64/libdl.so.2
+    - /lib64/libz.so.1
+    - /lib64/libc.so.6
+    - /lib64/libdl.so.2
+    - /lib64/libz.so.1
+    - /lib64/libc.so.6
+    - /lib64/ld-linux-x86-64.so.2
+    exclude:
+    - usr/share/man
+    - usr/share/doc/*/README.*
+    - usr/share/doc/*/changelog.*
+    - usr/share/doc/*/NEWS.*
+    - usr/share/doc/*/TODO.*
+  test:
+    fedora:
+      image: appimagecrafters/tests-env:fedora-30
+      command: ./AppRun
+      use_host_x: true
+    debian:
+      image: appimagecrafters/tests-env:debian-stable
+      command: ./AppRun
+      use_host_x: true
+    arch:
+      image: appimagecrafters/tests-env:archlinux-latest
+      command: ./AppRun
+      use_host_x: true
+    centos:
+      image: appimagecrafters/tests-env:centos-7
+      command: ./AppRun
+      use_host_x: true
+    ubuntu:
+      image: appimagecrafters/tests-env:ubuntu-xenial
+      command: ./AppRun
+      use_host_x: true
+AppImage:
+  arch: x86_64
+  update-information: guess
+  sign-key: None
