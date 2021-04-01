@@ -1,43 +1,45 @@
-# appimage-builder recipe see https://appimage-builder.readthedocs.io for details
+# Based on:
+# https://appimage-builder.readthedocs.io/en/latest/examples/pyqt.html
+
 version: 1
 script:
-  - rm -rf AppDir | true
-  - mkdir -p AppDir/usr/bin
-  - mkdir -p AppDir/usr/local/lib/agm
-  - cp ../dist/linux/AWSGlueManager/AWSGlueManager AppDir/usr/bin/AWSGlueManager
-  - cp ../dist/linux/AWSGlueManager/*.zip AppDir/
-  - for folder in `ls -1 -d ../dist/linux/AWSGlueManager/*/`; do cp -rf "$folder" AppDir/lib64/; done
-  - cp -rf ../dist/linux/AWSGlueManager/*.so AppDir/lib64/
-  - mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps/
-  - cp -rf ../dist/linux/AWSGlueManager/ui AppDir/usr/bin/
-  - cp ../dist/linux/AWSGlueManager/ui/icons/Arch_AWS-Glue_64.svg AppDir/usr/share/icons/hicolor/scalable/apps/awsgluemanager.svg
+  # Remove any previous build
+  - rm -rf AppDir  | true
+  # Make usr and icons dirs
+  - mkdir -p AppDir/usr/src
+  - mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+  # Copy the python application code into the AppDir
+  - cp ../main.py ../ui ../lib  AppDir/usr/src -r
+  # Add the application's icon
+  - cp ../ui/icons/Arch_AWS-Glue_64.svg AppDir/usr/share/icons/hicolor/scalable/apps/awsgluemanager.svg
+  # Generate the requirements.txt file
+  - pipenv lock -r > requirements.txt
+  # Install application dependencies in AppDir
+  - python3.9 -m pip install --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
+
 AppDir:
   path: ./AppDir
+
   app_info:
     id: name.giacomofurlan.AWSGlueManager
     name: AWS Glue Manager
     icon: awsgluemanager
     version: latest
-    exec: usr/bin/AWSGlueManager
-    exec_args: $@
+    # Set the python executable as entry point
+    exec: usr/bin/python3
+    # Set the application main script path as argument. Use '$@' to forward CLI parameters
+    exec_args: "$APPDIR/usr/src/main.py $@"
+
   runtime:
     env:
-      APPDIR_LIBRARY_PATH: $APPDIR/lib64
-  files:
-    include:
-    - /lib64/libdl.so.2
-    - /lib64/libz.so.1
-    - /lib64/libc.so.6
-    - /lib64/libdl.so.2
-    - /lib64/libz.so.1
-    - /lib64/libc.so.6
-    - /lib64/ld-linux-x86-64.so.2
-    exclude:
-    - usr/share/man
-    - usr/share/doc/*/README.*
-    - usr/share/doc/*/changelog.*
-    - usr/share/doc/*/NEWS.*
-    - usr/share/doc/*/TODO.*
+      PATH: '${APPDIR}/usr/bin:${PATH}'
+      # Set python home
+      # See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONHOME
+      PYTHONHOME: '${APPDIR}/usr'
+      # Path to the site-packages dir or other modules dirs
+      # See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH
+      PYTHONPATH: '${APPDIR}/usr/lib/python3.6/site-packages'
+
   test:
     fedora:
       image: appimagecrafters/tests-env:fedora-30
@@ -59,7 +61,8 @@ AppDir:
       image: appimagecrafters/tests-env:ubuntu-xenial
       command: ./AppRun
       use_host_x: true
+
 AppImage:
-  arch: x86_64
   update-information: guess
   sign-key: None
+  arch: x86_64
