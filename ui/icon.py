@@ -5,5 +5,6 @@ from os import path
 
 class QSVGIcon(QIcon):
     def __init__(self, fileName: str, *args, **kwargs) -> None:
+        basePath = path.dirname(path.realpath(__file__))
         super().__init__(path.sep.join(
-            ['ui', 'icons', fileName]), *args, **kwargs)
+            [basePath, 'icons', fileName]), *args, **kwargs)

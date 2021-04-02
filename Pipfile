@@ -5,14 +5,14 @@ verify_ssl = true
 
 [dev-packages]
 autopep8 = "*"
-pytest = "*"
-boto3-type-annotations = "*"
 pyinstaller = "*"
+pytest = "*"
 
 [packages]
-pyqt5 = "*"
-pycryptodome = "*"
 boto3 = "*"
+boto3-type-annotations = "*"
+pycryptodome = "*"
+pyqt5 = "*"
 pyqtchart = "*"
 tzlocal = "*"
 

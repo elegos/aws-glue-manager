@@ -5,3 +5,5 @@ __pycache__
 /dist
 /appimage/*
 !/appimage/AppImageBuilder.yml
+!/appimage/*.sh
+!/appimage/Dockerfile
