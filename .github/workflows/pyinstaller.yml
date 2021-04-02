@@ -18,13 +18,13 @@ jobs:
       uses: elegos/pyinstaller-action-linux@main
       with:
         path: .
-        spec: AWSGlueManager.linux.spec
+        spec: AWSGlueManager.spec
 
     - name: PyInstaller (Windows)
       uses: JackMcKew/pyinstaller-action-windows@main
       with:
         path: .
-        spec: AWSGlueManager.windows.spec
+        spec: AWSGlueManager.spec
 
     - name: Artifact upload (Linux)
       uses: actions/upload-artifact@v2
