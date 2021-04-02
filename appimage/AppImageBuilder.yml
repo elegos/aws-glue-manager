@@ -1,12 +1,29 @@
-# Based on:
-# https://appimage-builder.readthedocs.io/en/latest/examples/pyqt.html
-
+# appimage-builder recipe see https://appimage-builder.readthedocs.io for details
 version: 1
 script:
   # Remove any previous build
   - rm -rf AppDir  | true
+  - mkdir -p AppDir/usr
+  - mkdir -p AppDir/lib
+  - mkdir -p AppDir/bin
+  # Add required libc libraries
+  - cp /lib/x86_64-linux-gnu/libdl.so.2 AppDir/lib/
+  - cp /lib/x86_64-linux-gnu/libz.so.1 AppDir/lib/
+  - cp /lib/x86_64-linux-gnu/libc.so.6 AppDir/lib/
+  - cp /lib/x86_64-linux-gnu/libdl.so.2 AppDir/lib/
+  - cp /lib/x86_64-linux-gnu/libz.so.1 AppDir/lib/
+  - cp /lib/x86_64-linux-gnu/libc.so.6 AppDir/lib/
+  - cp /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 AppDir/lib/
   # Install python3.9
-  - ./python-builder.sh
+  - cp -r /opt/python3.9/* AppDir/usr/
+  - ln -sr AppDir/usr/bin/python3.9 AppDir/usr/bin/python
+  # Extra binaries required
+  - cp /bin/bash AppDir/bin/
+  - cp /usr/bin/env AppDir/bin/
+  - cp /bin/sh AppDir/bin/
+  # PATCH: remove executable flag from archive files to prevent appimage-builder to search for non-existing ELF flag
+  # https://github.com/AppImageCrafters/appimage-builder/blob/2a89cee877a3048852dd02a17a84a1fef7e7b66d/appimagebuilder/builder/runtime/executables_scanner.py#L51
+  - for file in $(find AppDir/usr/lib/ -name "*.a"); do chmod -x $file; done
   # Make usr and icons dirs
   - mkdir -p AppDir/usr/src
   - mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
@@ -15,9 +32,10 @@ script:
   # Add the application's icon
   - cp ../ui/icons/Arch_AWS-Glue_64.svg AppDir/usr/share/icons/hicolor/scalable/apps/awsgluemanager.svg
   # Generate the requirements.txt file
-  - pipenv lock -r > requirements.txt
+  - python3.9 -m pip install pipenv
+  - python3.9 -m pipenv lock -r > requirements.txt
   # Install application dependencies in AppDir
-  - ./AppDir/usr/bin/python3.9 -m pip install --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
+  - python3.9 -m pip install --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
 
 AppDir:
   path: ./AppDir
@@ -34,7 +52,8 @@ AppDir:
 
   runtime:
     env:
-      APPDIR_LIBRARY_PATH: $APPDIR/lib/x86_64-linux-gnu
+      # APPDIR_LIBRARY_PATH: $APPDIR/lib
+      # APPDIR_LIBRARY_PATH: $APPDIR/lib/x86_64-linux-gnu
       PATH: '${APPDIR}/usr/bin:${PATH}'
       # Set python home
       # See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONHOME
@@ -43,14 +62,16 @@ AppDir:
       # See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH
       PYTHONPATH: '${APPDIR}/usr/lib/python3.9/site-packages'
   files:
-    include:
-    - /lib/x86_64-linux-gnu/libdl.so.2
-    - /lib/x86_64-linux-gnu/libz.so.1
-    - /lib/x86_64-linux-gnu/libc.so.6
-    - /lib/x86_64-linux-gnu/libdl.so.2
-    - /lib/x86_64-linux-gnu/libz.so.1
-    - /lib/x86_64-linux-gnu/libc.so.6
-    - /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+    include: []
+    # - /usr/bin/bash
+    # - /usr/bin/sh
+    # - /lib/x86_64-linux-gnu/libdl.so.2
+    # - /lib/x86_64-linux-gnu/libz.so.1
+    # - /lib/x86_64-linux-gnu/libc.so.6
+    # - /lib/x86_64-linux-gnu/libdl.so.2
+    # - /lib/x86_64-linux-gnu/libz.so.1
+    # - /lib/x86_64-linux-gnu/libc.so.6
+    # - /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
     exclude:
     - usr/share/man
     - usr/share/doc/*/README.*
@@ -79,8 +100,7 @@ AppDir:
       image: appimagecrafters/tests-env:ubuntu-xenial
       command: ./AppRun
       use_host_x: true
-
 AppImage:
+  arch: x86_64
   update-information: guess
   sign-key: None
-  arch: x86_64
