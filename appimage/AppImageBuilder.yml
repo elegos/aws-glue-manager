@@ -5,11 +5,8 @@ script:
   - rm -rf AppDir  | true
   - mkdir -p AppDir/usr
   # Install python3.9
-  - cp -r /opt/python3.9/* AppDir/usr/
-  - ln -sr AppDir/usr/bin/python3.9 AppDir/usr/bin/python
-  # PATCH: remove executable flag from archive files to prevent appimage-builder to search for non-existing ELF flag
-  # https://github.com/AppImageCrafters/appimage-builder/blob/2a89cee877a3048852dd02a17a84a1fef7e7b66d/appimagebuilder/builder/runtime/executables_scanner.py#L51
-  - for file in $(find AppDir/usr/lib/ -name "*.a"); do chmod -x $file; done
+  - docker run --rm --user "$(id -u):$(id -g)" --volume "$(pwd)/AppDir/usr/":/opt/out giacomofurlan/python-precompiled:v3.9 /opt/out/
+  - ln -sr AppDir/usr/bin/python3 AppDir/usr/bin/python
   # Make usr and icons dirs
   - mkdir -p AppDir/usr/src
   - mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
@@ -18,12 +15,19 @@ script:
   # Add the application's icon
   - cp ../ui/icons/Arch_AWS-Glue_64.svg AppDir/usr/share/icons/hicolor/scalable/apps/awsgluemanager.svg
   # Generate the requirements.txt file
-  - python3.9 -m pip install --upgrade pip
-  - python3.9 -m pip install pipenv
-  - python3.9 -m pipenv lock -r > requirements.txt
+  - export PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages"
+  - AppDir/usr/bin/python3.9 -m pip install --upgrade pip
+  - AppDir/usr/bin/python3.9 -m pip install pipenv
+  - AppDir/usr/bin/python3.9 -m pipenv lock -r > requirements.txt
   # Install application dependencies in AppDir
-  - python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr wheel
-  - python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
+  - AppDir/usr/bin/python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr wheel
+  - AppDir/usr/bin/python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
+  # Fix non-debian-based libc ld library path (for tests)
+  - mkdir -p AppDir/opt/libc/lib64
+  - mkdir -p AppDir/opt/libc/usr/lib64
+  - touch AppDir/opt/libc/usr/lib64/ld-linux-x86-64.so.2
+  - ln -sr AppDir/opt/libc/usr/lib64/ld-linux-x86-64.so.2 AppDir/opt/libc/lib64/ld-linux-x86-64.so.2
+  - rm AppDir/opt/libc/usr/lib64/ld-linux-x86-64.so.2
 
 AppDir:
   path: ./AppDir
@@ -48,15 +52,26 @@ AppDir:
       PYTHONHOME: '${APPDIR}/usr'
       # Path to the site-packages dir or other modules dirs
       # See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH
-      PYTHONPATH: '${APPDIR}/usr/lib/python3.9/site-packages'
+      PYTHONPATH: '${APPDIR}/usr/lib64/python3.9/site-packages'
+      QT_DEBUG_PLUGINS: 1
   files:
     include:
-      - /bin/bash
       - /usr/bin/env
+
+      # Debian based
+      - /bin/bash
       - /bin/sh
+
       - /lib/x86_64-linux-gnu/libdl.so.2
       - /lib/x86_64-linux-gnu/libz.so.1
       - /lib/x86_64-linux-gnu/libc.so.6
+      # Fedora based
+      - /usr/bin/bash
+      - /usr/bin/sh
+
+      - /usr/lib64/libc.so.6
+      - /usr/lib64/ld-linux-x86-64.so.2
+      - /usr/lib64/libcrypt.so.1
     exclude:
     - usr/share/man
     - usr/share/doc/*/README.*
@@ -66,7 +81,7 @@ AppDir:
 
   test:
     fedora:
-      image: appimagecrafters/tests-env:fedora-30
+      image: appimagecrafters/tests-env:fedora-33
       command: ./AppRun
       use_host_x: true
     debian:
