@@ -16,12 +16,12 @@ script:
   - cp ../ui/icons/Arch_AWS-Glue_64.svg AppDir/usr/share/icons/hicolor/scalable/apps/awsgluemanager.svg
   # Generate the requirements.txt file
   - export PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages"
-  - AppDir/usr/bin/python3.9 -m pip install --upgrade pip
-  - AppDir/usr/bin/python3.9 -m pip install pipenv
-  - AppDir/usr/bin/python3.9 -m pipenv lock -r > requirements.txt
+  - PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages" AppDir/usr/bin/python3.9 -m pip install --upgrade pip
+  - PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages" AppDir/usr/bin/python3.9 -m pip install pipenv
+  - PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages" AppDir/usr/bin/python3.9 -m pipenv lock -r > requirements.txt
   # Install application dependencies in AppDir
-  - AppDir/usr/bin/python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr wheel
-  - AppDir/usr/bin/python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
+  - PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages" AppDir/usr/bin/python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr wheel
+  - PYTHONPATH="$(pwd)/AppDir/usr/lib64/python3.9/site-packages" AppDir/usr/bin/python3.9 -m pip install --upgrade --isolated --no-input --ignore-installed --prefix=./AppDir/usr -r ./requirements.txt
   # Fix non-debian-based libc ld library path (for tests)
   - mkdir -p AppDir/opt/libc/lib64
   - mkdir -p AppDir/opt/libc/usr/lib64
@@ -53,7 +53,7 @@ AppDir:
       # Path to the site-packages dir or other modules dirs
       # See https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH
       PYTHONPATH: '${APPDIR}/usr/lib64/python3.9/site-packages'
-      QT_DEBUG_PLUGINS: 1
+
   files:
     include:
       - /usr/bin/env
@@ -69,9 +69,19 @@ AppDir:
       - /usr/bin/bash
       - /usr/bin/sh
 
+      - /usr/lib64/libdl.so.2
+      - /usr/lib64/libz.so.1
       - /usr/lib64/libc.so.6
+
       - /usr/lib64/ld-linux-x86-64.so.2
       - /usr/lib64/libcrypt.so.1
+      - /usr/lib64/libxcb-icccm.so.4
+      - /usr/lib64/libxcb-image.so.0
+      - /usr/lib64/libxcb-keysyms.so.1
+      - /usr/lib64/libxcb-render-util.so.0
+      - /usr/lib64/libxkbcommon-x11.so.0
+      - /usr/lib64/libpthread.so.0
+      - /usr/lib64/libGL.so.1.7.0
     exclude:
     - usr/share/man
     - usr/share/doc/*/README.*
@@ -84,10 +94,17 @@ AppDir:
       image: appimagecrafters/tests-env:fedora-33
       command: ./AppRun
       use_host_x: true
+      # env:
+      #   QT_DEBUG_PLUGINS: 1
+      #   LD_DEBUG: libs
+
     debian:
-      image: appimagecrafters/tests-env:debian-stable
+      image: debian:buster-slim
       command: ./AppRun
       use_host_x: true
+      env:
+        QT_DEBUG_PLUGINS: 1
+        LD_DEBUG: libs
     arch:
       image: appimagecrafters/tests-env:archlinux-latest
       command: ./AppRun

@@ -1,8 +1,12 @@
 __pycache__
 .pytest_cache
 /.vscode/settings.json
+/AppDir
 /build
 /dist
+/requirements.txt
+/*.appimage
+# Deprecated
 /appimage/*
 !/appimage/AppImageBuilder.yml
 !/appimage/*.sh

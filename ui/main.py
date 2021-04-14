@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import List, Optional
 
 from PyQt5.QtCore import QSize, Qt, QThreadPool
@@ -179,6 +180,7 @@ class MainWindow(QMainWindow):
 
     def onAWSException(self, exception: Exception, withAfterAWSCall: bool):
         self._logger.error(exception)
+        traceback.print_tb(exception.__traceback__)
         if withAfterAWSCall:
             self.afterAWSCall(str(exception))
 
