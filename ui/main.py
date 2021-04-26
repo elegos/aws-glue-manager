@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         self.statusProgressBar.setVisible(True)
 
         self.profilePicklist.setEnabled(False)
-        self.tabsView.setEnabled(False)
+        # self.tabsView.setEnabled(False)
         self.jobsTab.signals.enable.emit(False)
 
     def afterAWSCall(self, status: str = 'Ready', incrementProgress: bool = False):

@@ -106,6 +106,7 @@ class JobsTab(QWidget):
     filter: QTextEdit
     table: QTableView
     refreshButton: QPushButton
+    last24HoursUsageButton: QPushButton
     failedOnlyCheckbox: QCheckBox
 
     jobs: List[aws.Job]
@@ -173,7 +174,8 @@ class JobsTab(QWidget):
 
         self.table.doubleClicked.connect(self.onTableDoubleClick)
 
-        last24HoursUsageButton = QPushButton('Show Glue usage (last 24 hours)')
+        self.last24HoursUsageButton = QPushButton(
+            'Show Glue usage (last 24 hours)')
 
         def showUsage():
             toDT = datetime.now(tz=tzlocal.get_localzone())
@@ -186,10 +188,10 @@ class JobsTab(QWidget):
             )
             self.usageWindow.show()
 
-        last24HoursUsageButton.pressed.connect(showUsage)
+        self.last24HoursUsageButton.pressed.connect(showUsage)
 
         layout.addWidget(filterWidget)
-        layout.addWidget(last24HoursUsageButton)
+        layout.addWidget(self.last24HoursUsageButton)
         layout.addWidget(self.table, stretch=1)
 
         self.setLayout(layout)
@@ -197,10 +199,8 @@ class JobsTab(QWidget):
         self.signals.enable.connect(self.setEnableStatus)
 
     def setEnableStatus(self, enabled: bool):
-        if enabled:
-            self.refreshButton.setEnabled(True)
-        else:
-            self.refreshButton.setEnabled(False)
+        self.refreshButton.setEnabled(enabled)
+        self.last24HoursUsageButton.setEnabled(enabled)
 
     def updateJobs(self, jobs: List[aws.Job]):
         # Reset the opened dialogs
