@@ -1,6 +1,11 @@
 from typing import Tuple, Union
+from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import QTableView
+
+
+class TabViewSignals(QObject):
+    enable = pyqtSignal(bool)
 
 
 def decorateTable(table: QTableView, *columns: Tuple[str, int]) -> None:

@@ -12,7 +12,7 @@ import tzlocal
 from lib import aws, timeUtils
 from ui.icon import QSVGIcon
 from ui.jobDetails import QJobDetails
-from ui.tabs.common import QReadOnlyItem, decorateTable
+from ui.tabs.common import QReadOnlyItem, TabViewSignals, decorateTable
 from ui.tabs.job_chart import QJobsChartWindow
 
 jobColumns = [
@@ -87,10 +87,6 @@ def jobFilterFactory(text: str, onlyRunJobs: bool) -> Callable[[aws.Job, Optiona
         return reduce(lambda x, y: x and y(obj), filtersList, True)
 
     return jobFilter
-
-
-class TabViewSignals(QObject):
-    enable = pyqtSignal(bool)
 
 
 class JobsSignals(TabViewSignals):
@@ -198,9 +194,10 @@ class JobsTab(QWidget):
 
         self.signals.enable.connect(self.setEnableStatus)
 
-    def setEnableStatus(self, enabled: bool):
-        self.refreshButton.setEnabled(enabled)
-        self.last24HoursUsageButton.setEnabled(enabled)
+    def setEnableStatus(self, status: bool):
+        self.filter.setEnabled(status)
+        self.refreshButton.setEnabled(status)
+        self.last24HoursUsageButton.setEnabled(status)
 
     def updateJobs(self, jobs: List[aws.Job]):
         # Reset the opened dialogs
