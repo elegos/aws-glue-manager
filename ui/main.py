@@ -75,7 +75,10 @@ class MainWindow(QMainWindow):
 
         self.jobsTab = JobsTab()
         self.jobsTab.refreshButton.clicked.connect(self.onJobsDataRequested)
+
         self.workflowsTab = WorkflowsTab()
+        self.workflowsTab.refreshButton.clicked.connect(
+            self.onWorkflowsDataRequested)
 
         self.tabsView = QTabWidget()
         self.tabsView.addTab(self.jobsTab, 'Jobs')
@@ -178,6 +181,25 @@ class MainWindow(QMainWindow):
         self.afterAWSCall(incrementProgress=True)
         self.jobsTab.signals.jobRunsUpdated.emit(jobRuns)
 
+    def onWorkflowsDataRequested(self, *_) -> None:
+        self.workflowsTab.signals.workflowsUpdated.emit([])
+        self.workflowsTab.signals.workflowsRunsUpdated.emit([])
+
+        self.beforeAWSCall('Downloading workflows data...')
+        runnable = aws.getRunnable(aws.getWorkflowsList, self.profile)
+
+        runnable.signals.success.connect(self.onWorkflowsListDownloaded)
+        runnable.signals.success.connect(
+            lambda: self.afterAWSCall('Ready'))
+        runnable.signals.raised.connect(
+            lambda ex: self.onAWSException(ex, True))
+
+        self.threadPool.start(runnable)
+
+    def onWorkflowsListDownloaded(self, workflows: List[str]) -> None:
+        # TODO
+        self._logger.debug(workflows)
+
     def onAWSException(self, exception: Exception, withAfterAWSCall: bool):
         self._logger.error(exception)
         traceback.print_tb(exception.__traceback__)
@@ -193,8 +215,8 @@ class MainWindow(QMainWindow):
         self.statusProgressBar.setVisible(True)
 
         self.profilePicklist.setEnabled(False)
-        # self.tabsView.setEnabled(False)
         self.jobsTab.signals.enable.emit(False)
+        self.workflowsTab.signals.enable.emit(False)
 
     def afterAWSCall(self, status: str = 'Ready', incrementProgress: bool = False):
         self.apiStack -= 1
@@ -212,6 +234,7 @@ class MainWindow(QMainWindow):
             self.profilePicklist.setEnabled(True)
             self.tabsView.setEnabled(True)
             self.jobsTab.signals.enable.emit(True)
+            self.workflowsTab.signals.enable.emit(True)
 
     def closeEvent(self, _) -> None:
         '''When the main window closes, close all the other dialogs'''

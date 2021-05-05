@@ -1,5 +1,5 @@
 from ui.icon import QSVGIcon
-from PyQt5.QtCore import QSize
+from PyQt5.QtCore import QSize, pyqtSignal
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QTableView, QVBoxLayout, QWidget
 from logging import Logger, getLogger
 
@@ -7,7 +7,8 @@ from ui.tabs.common import TabViewSignals, decorateTable
 
 
 class WorkflowsTabSignals(TabViewSignals):
-    pass
+    workflowsUpdated = pyqtSignal(list)
+    workflowsRunsUpdated = pyqtSignal(list)
 
 
 class WorkflowsTab(QWidget):
@@ -52,7 +53,6 @@ class WorkflowsTab(QWidget):
 
         # events
         self.signals.enable.connect(self.setEnableState)
-        self.refreshButton.clicked.connect(self.onRefreshButtonClick)
 
     def setEnableState(self, state: bool):
         self.logger.debug(
@@ -61,6 +61,3 @@ class WorkflowsTab(QWidget):
 
         self.filter.setEnabled(state)
         self.refreshButton.setEnabled(state)
-
-    def onRefreshButtonClick(self, _: bool):
-        self.logger.info('Refreshing workflows table')

@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List, Tuple
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 from boto3_type_annotations.glue.client import Client
 from botocore.config import Config
@@ -34,6 +34,25 @@ def getClient(clientName: str, profile: AWSProfile) -> Any:
     return _clients[key]
 
 
+def dataclassPostInitializer(fieldTuples: List[Tuple[str, type]]) -> Callable[[Any], None]:
+    def initializer(self: Any) -> None:
+        for fieldTuple in fieldTuples:
+            field, fType = fieldTuple
+            data = getattr(self, field)
+            if data is not None:
+                setattr(self, field, initClassFromArgs(
+                    fType, data
+                ))
+
+    return initializer
+
+
+def initClassFromArgs(classType: type, data: dict):
+    fieldNames = [field.name for field in dataclasses.fields(classType)]
+
+    return classType(**{key: value for key, value in data.items() if key in fieldNames})
+
+
 def getResponseItems(dataclassClass: type, responseField: str, response: dict):
     if responseField not in response:
         logging.getLogger().error(f'{responseField} not in response.')
@@ -41,10 +60,7 @@ def getResponseItems(dataclassClass: type, responseField: str, response: dict):
 
         return []
 
-    fieldNames = [field.name for field in dataclasses.fields(dataclassClass)]
-
-    return [dataclassClass(**{k: v for k, v in datum.items() if k in fieldNames})
-            for datum in response[responseField]]
+    return [initClassFromArgs(dataclassClass, datum) for datum in response[responseField]]
 
 
 class QAWSRunnableSignals(QObject):
