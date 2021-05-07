@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 - AppImage build via AppDirBuilder + appimagetool
 - Do not block the entire tab view when updating the jobs, but only the action buttons
+- Workflows tab:
+  - list of workflows
+  - filter by name, last execution status
+  - configurable status icon logic via checkbox
 
 ## [v0.0.4.1] - 2021-03-31
 ### Changed

@@ -12,44 +12,14 @@ import tzlocal
 from lib import aws, timeUtils
 from ui.icon import QSVGIcon
 from ui.jobDetails import QJobDetails
-from ui.tabs.common import QReadOnlyItem, TabViewSignals, decorateTable
+from ui.tabs.common import QReadOnlyItem, TabViewSignals, decorateTable, searchInObjectFieldFactory, searchInObjectFieldsFactory
 from ui.tabs.job_chart import QJobsChartWindow
 
 jobColumns = [
-    ('', 16), ('Name', 330),
+    ('', 10), ('Name', 330),
     ('Last execution', 146), ('Duration', 80),
     ('Result', 140), ('Error message', 244)
 ]
-
-
-def searchInObjectField(obj: dict, key: str, value: str) -> bool:
-    if key not in obj.keys():
-        return False
-
-    attr = obj[key]
-    if not isinstance(attr, str) or value.lower() not in attr.lower():
-        return False
-
-    return True
-
-
-def searchInObjectFieldFactory(key: str, value: str) -> Callable[[dict], bool]:
-    return lambda obj: searchInObjectField(obj, key, value)
-
-
-def searchInObjectFields(obj: dict, value: str) -> bool:
-    keys = obj.keys()
-
-    for key in keys:
-        result = searchInObjectField(obj, key, value)
-        if result:
-            return True
-
-    return False
-
-
-def searchInObjectFieldsFactory(value: str) -> Callable[[dict], bool]:
-    return lambda obj: searchInObjectFields(obj, value)
 
 
 def jobFilterFactory(text: str, onlyRunJobs: bool) -> Callable[[aws.Job, Optional[aws.JobRun]], bool]:

@@ -42,7 +42,7 @@ class WorkflowRun:
         dataclassPostInitializer([
             ('Statistics', WorkflowRunStatistics),
             ('Graph', WorkflowGraph),
-        ])
+        ])(self)
 
 
 @dataclass

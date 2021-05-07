@@ -197,8 +197,8 @@ class MainWindow(QMainWindow):
         self.threadPool.start(runnable)
 
     def onWorkflowsListDownloaded(self, workflows: List[str]) -> None:
-        # TODO
-        self._logger.debug(workflows)
+        self.afterAWSCall(incrementProgress=True)
+        self.workflowsTab.signals.workflowsUpdated.emit(workflows)
 
     def onAWSException(self, exception: Exception, withAfterAWSCall: bool):
         self._logger.error(exception)
