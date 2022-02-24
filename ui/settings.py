@@ -1,4 +1,3 @@
-from os import access
 import logging
 from ui.alertDialog import QAlertDialog
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -172,7 +171,7 @@ class QSettingsDialog(QDialog):
 
         self.populateProfilesPicklist()
         self.manageProfileButtonStates()
-        self.signals.settings.profilesModified.emit()
+        self.signals.profilesModified.emit()
 
         dialog.close()
 
